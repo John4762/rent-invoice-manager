@@ -17,3 +17,19 @@ Only latest generated cycle can be regenerated.
 
 Archive:
 Keep forever.
+
+
+John
+- app/*
+- services/*
+- types/*
+- constants/*
+- src-tauri/*
+
+Nina
+- pages/tenants/*
+- pages/settings/*
+
+Noel
+- pages/generate-invoices/*
+- pages/preview-invoices/*

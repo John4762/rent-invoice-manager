@@ -1,0 +1,4 @@
+export const FINANCIAL_YEAR_START_MONTH = 4;
+
+export const DEFAULT_CGST_PERCENT = 9;
+export const DEFAULT_SGST_PERCENT = 9;

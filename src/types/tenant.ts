@@ -1,7 +1,14 @@
 export interface Tenant {
   id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  address?: string;
+  tenantName: string;
+  tenantCode: string;
+  tenantGstin: string;
+  tenantAddress: string;
+  locationAddress: string;
+  rentAmount: number;
+  cgstPercent: number;
+  sgstPercent: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
