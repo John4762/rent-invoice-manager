@@ -3,12 +3,12 @@ import { Sidebar } from "./Sidebar";
 
 export function AppLayout() {
   return (
-    <div className="bg-background text-foreground flex h-screen">
+    <div className="bg-background text-foreground flex h-screen overflow-hidden">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto p-6">
-        <Outlet />
-      </main>
+    <main className="flex-1 overflow-auto p-6">
+      <Outlet />
+    </main>
     </div>
   );
 }

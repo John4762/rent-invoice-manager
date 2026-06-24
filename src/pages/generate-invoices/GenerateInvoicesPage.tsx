@@ -1,7 +1,12 @@
+import { PageHeader } from "@/components/common/PageHeader";
+
 export function GenerateInvoicesPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Generate Invoices</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Generate Invoices"
+        description="Create new invoices for your tenants."
+      />
     </div>
   );
 }

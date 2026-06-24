@@ -1,7 +1,12 @@
+import { PageHeader } from "@/components/common/PageHeader";
+
 export function SettingsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Settings</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Settings"
+        description="Manage your application settings."
+      />
     </div>
   );
 }

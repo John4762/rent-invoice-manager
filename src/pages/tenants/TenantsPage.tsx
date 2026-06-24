@@ -1,7 +1,12 @@
+import { PageHeader } from "@/components/common/PageHeader";
+
 export function TenantsPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Tenants</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Tenants"
+        description="Manage tenant information and contact details."
+      />
     </div>
   );
 }
