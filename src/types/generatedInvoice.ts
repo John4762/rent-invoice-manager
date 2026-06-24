@@ -6,10 +6,10 @@ export interface GeneratedInvoice {
 
   invoiceNumber: string;
 
-  pdfPath: string;
-
   invoiceMonth: number;
   invoiceYear: number;
+
+  pdfPath: string;
 
   generatedAt: string;
 }

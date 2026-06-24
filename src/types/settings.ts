@@ -2,6 +2,7 @@ export interface AppSettings {
   landlordName: string;
   landlordPan: string;
   landlordGstin: string;
+
   landlordAddress: string;
 
   invoicePrefix: string;
