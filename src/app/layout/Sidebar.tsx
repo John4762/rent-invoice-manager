@@ -1,12 +1,5 @@
 import { NavLink } from "react-router-dom";
-import {
-  Eye,
-  FileText,
-  Settings,
-  Users,
-} from "lucide-react";
-
-import { Separator } from "@/components/ui/separator";
+import { Eye, FileText, Settings, Users } from "lucide-react";
 
 const navItems = [
   {
@@ -33,18 +26,29 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="flex h-full w-72 flex-col border-r bg-background">
+    <aside
+      className="
+    m-4
+    flex
+    w-68
+    flex-col
+    rounded-3xl
+    border
+    border-zinc-800
+    bg-zinc-900/80
+    backdrop-blur-xl
+    shadow-2xl
+  "
+    >
       <div className="p-6">
-        <h1 className="text-lg font-bold">
+        <h1 className="text-xl font-semibold tracking-tight text-zinc-100">
           Rent Invoice Manager
         </h1>
 
-        <p className="text-sm text-muted-foreground">
-          Invoice Management System
-        </p>
+        <p className="text-sm text-zinc-400">Invoice Management System</p>
       </div>
 
-      <Separator />
+      <div className="mx-4 h-px bg-zinc-800" />
 
       <nav className="flex-1 p-4">
         <div className="space-y-1">
@@ -60,8 +64,8 @@ export function Sidebar() {
                   flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
                   ${
                     isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
+                      ? "bg-zinc-800/90 ring-1ring-zinc-700 text-white shadow-sm"
+                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100"
                   }
                 `
                 }
@@ -74,11 +78,9 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <Separator />
+      <div className="mx-4 h-px bg-zinc-800" />
 
-      <div className="p-4 text-xs text-muted-foreground">
-        Version 0.1.0
-      </div>
+      <div className="p-5 text-xs text-zinc-500">Version 0.1.0</div>
     </aside>
   );
 }
