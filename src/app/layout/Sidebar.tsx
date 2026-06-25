@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Eye, FileText, Settings, Users } from "lucide-react";
+import { Eye, FileText, Settings, Users, Archive } from "lucide-react";
 
 const navItems = [
   {
@@ -11,6 +11,11 @@ const navItems = [
     label: "Preview Invoices",
     path: "/preview",
     icon: Eye,
+  },
+  {
+    label: "Archive",
+    path: "/archive",
+    icon: Archive,
   },
   {
     label: "Tenants",
