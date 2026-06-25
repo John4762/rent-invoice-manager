@@ -1,3 +1,5 @@
+import type { Tenant } from "@/types/tenant";
+
 export interface TenantApi {
   getAll(): Promise<Tenant[]>;
   getById(id: string): Promise<Tenant | null>;
