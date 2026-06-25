@@ -19,11 +19,11 @@ export function SettingsPage() {
 
       <Card
         className="
-    border-zinc-700
-    bg-zinc-800/50
-    backdrop-blur-sm
-    shadow-lg
-  "
+          border-zinc-700
+          bg-zinc-800/50
+          backdrop-blur-sm
+          shadow-lg
+        "
       >
         <CardHeader>
           <CardTitle>Application Settings</CardTitle>
