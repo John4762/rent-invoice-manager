@@ -1,5 +1,5 @@
+import { PDFViewer } from "@react-pdf/renderer";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/common/PageHeader";
 import { landlordInfo, tenantRentalData } from "@/data/sampleInvoiceData";
 import {
@@ -11,6 +11,8 @@ import {
   getExistingInvoiceRecordsForEngine,
   saveGeneratedInvoiceRun,
 } from "@/lib/generatedInvoiceStore";
+import type { GeneratedInvoiceRun } from "@/lib/generatedInvoiceStore";
+import { RentalInvoicePdf } from "@/pdf/RentalInvoicePdf";
 
 function getCurrentCalendarCycleMonth(): string {
   const today = new Date();
@@ -28,9 +30,14 @@ function getCycleMonthLabel(cycleMonth: string): string {
   );
 }
 
-export function GenerateInvoicesPage() {
-  const navigate = useNavigate();
+function formatGeneratedAt(value: string): string {
+  return new Date(value).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
+export function GenerateInvoicesPage() {
   const defaultSelectedTenantIds = useMemo(
     () => tenantRentalData.map((tenant) => tenant.tenantId),
     [],
@@ -41,10 +48,19 @@ export function GenerateInvoicesPage() {
     defaultSelectedTenantIds,
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [generatedRun, setGeneratedRun] = useState<GeneratedInvoiceRun | null>(
+    null,
+  );
+  const [selectedInvoiceIndex, setSelectedInvoiceIndex] = useState(0);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const selectedTenants = tenantRentalData.filter((tenant) =>
     selectedTenantIds.includes(tenant.tenantId),
   );
+
+  const invoices = generatedRun?.invoices ?? [];
+  const selectedInvoice = invoices[selectedInvoiceIndex];
 
   function handleTenantToggle(tenantId: number) {
     setSelectedTenantIds((currentTenantIds) => {
@@ -64,7 +80,7 @@ export function GenerateInvoicesPage() {
 
     const existingInvoiceRecords = getExistingInvoiceRecordsForEngine();
 
-    const invoices = selectedTenants.map((tenant) =>
+    const invoicesForRun = selectedTenants.map((tenant) =>
       createRentalInvoiceDraft({
         landlord: landlordInfo,
         tenant,
@@ -77,19 +93,37 @@ export function GenerateInvoicesPage() {
       }),
     );
 
-    saveGeneratedInvoiceRun({
+    const savedRun = saveGeneratedInvoiceRun({
       cycleMonth,
-      invoices,
+      invoices: invoicesForRun,
     });
 
-    navigate("/preview");
+    setGeneratedRun(savedRun);
+    setSelectedInvoiceIndex(0);
+    setZoom(1);
+    setRotation(0);
+    setStatusMessage(
+      `Generated ${invoicesForRun.length} invoice(s) for ${getCycleMonthLabel(
+        cycleMonth,
+      )}.`,
+    );
+  }
+
+  function handlePreviousInvoice() {
+    setSelectedInvoiceIndex((currentIndex) => Math.max(currentIndex - 1, 0));
+  }
+
+  function handleNextInvoice() {
+    setSelectedInvoiceIndex((currentIndex) =>
+      Math.min(currentIndex + 1, invoices.length - 1),
+    );
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Generate Invoices"
-        description="Create new invoices for your tenants."
+        description="Create and preview invoices for your tenants."
       />
 
       <div className="rounded-lg border bg-white p-6 shadow-sm">
@@ -157,12 +191,118 @@ export function GenerateInvoicesPage() {
           </button>
 
           {statusMessage ? (
-            <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
+            <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
               {statusMessage}
             </div>
           ) : null}
         </div>
       </div>
+
+      {generatedRun && selectedInvoice ? (
+        <div className="space-y-4">
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Generated at</p>
+                <p className="font-medium text-gray-900">
+                  {formatGeneratedAt(generatedRun.generatedAt)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Current invoice</p>
+                <p className="font-medium text-gray-900">
+                  {selectedInvoice.tenant.name} ·{" "}
+                  {selectedInvoice.invoiceNumber}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handlePreviousInvoice}
+                  disabled={selectedInvoiceIndex === 0}
+                  className="rounded-md border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ← Previous
+                </button>
+
+                <span className="text-sm text-gray-700">
+                  {selectedInvoiceIndex + 1} / {invoices.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleNextInvoice}
+                  disabled={selectedInvoiceIndex === invoices.length - 1}
+                  className="rounded-md border px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-white p-3 shadow-sm">
+            <button
+              type="button"
+              onClick={() =>
+                setZoom((currentZoom) => Math.max(currentZoom - 0.1, 0.6))
+              }
+              className="rounded-md border px-3 py-2 text-sm"
+            >
+              Zoom out
+            </button>
+
+            <span className="text-sm text-gray-700">
+              {Math.round(zoom * 100)}%
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setZoom((currentZoom) => Math.min(currentZoom + 0.1, 1.6))
+              }
+              className="rounded-md border px-3 py-2 text-sm"
+            >
+              Zoom in
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="rounded-md border px-3 py-2 text-sm"
+            >
+              Reset zoom
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setRotation((currentRotation) => currentRotation + 90)
+              }
+              className="rounded-md border px-3 py-2 text-sm"
+            >
+              Rotate
+            </button>
+          </div>
+
+          <div className="h-[80vh] overflow-auto rounded-lg border bg-white shadow-sm">
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                transformOrigin: "top center",
+              }}
+            >
+              <PDFViewer width="100%" height="100%" showToolbar={false}>
+                <RentalInvoicePdf invoice={selectedInvoice} />
+              </PDFViewer>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
