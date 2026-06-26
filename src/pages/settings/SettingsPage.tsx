@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+
 import { AppContainer } from "@/components/common/AppContainer";
 import { PageHeader } from "@/components/common/PageHeader";
 
@@ -9,6 +11,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+
+async function testArchive() {
+  try {
+    await invoke("seed_archive_data");
+
+    const invoice = await invoke(
+      "get_invoice_details",
+      {
+        invoiceNumber: "AJ/CP/3/26-27",
+      }
+    );
+
+    console.log(invoice);
+
+    alert(JSON.stringify(invoice, null, 2));
+  } catch (error) {
+    console.error(error);
+
+    alert(`ERROR: ${String(error)}`);
+  }
+}
+
 export function SettingsPage() {
   return (
     <AppContainer>
@@ -19,11 +43,11 @@ export function SettingsPage() {
 
       <Card
         className="
-    border-zinc-700
-    bg-zinc-800/50
-    backdrop-blur-sm
-    shadow-lg
-  "
+          border-zinc-700
+          bg-zinc-800/50
+          backdrop-blur-sm
+          shadow-lg
+        "
       >
         <CardHeader>
           <CardTitle>Application Settings</CardTitle>
@@ -33,10 +57,23 @@ export function SettingsPage() {
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-sm text-zinc-400">
             Settings form will be implemented here.
           </p>
+
+          <button
+            onClick={testArchive}
+            className="
+    rounded-lg
+    bg-red-500
+    px-4
+    py-2
+    text-white
+  "
+          >
+            TEST
+          </button>
         </CardContent>
       </Card>
     </AppContainer>
