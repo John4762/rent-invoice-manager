@@ -13,6 +13,7 @@ interface ArchiveInvoice {
   invoice_number: string;
   total_amount: number;
   email_sent: boolean;
+  email_status?: "sent" | "failed" | "pending";
 }
 
 interface ArchiveInvoiceDetails {
@@ -26,6 +27,7 @@ interface ArchiveInvoiceDetails {
   generated_at: string;
   email_sent: boolean;
   pdf_path: string;
+  email_status?: "sent" | "failed" | "pending";
 }
 
 export function ArchivePage() {

@@ -1,9 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
 
 import { AppLayout } from "../layout/AppLayout";
-
+import { PrintEmailPage } from "@/pages/print-email/PrintEmailPage";
 import { GenerateInvoicesPage } from "@/pages/generate-invoices/GenerateInvoicesPage";
-import { PreviewInvoicesPage } from "@/pages/preview-invoices/PreviewInvoicesPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { TenantsPage } from "@/pages/tenants/TenantsPage";
 import { ArchivePage } from "@/pages/archive/ArchivePage";
@@ -14,12 +13,12 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       {
-        index: true,
-        element: <GenerateInvoicesPage />,
+  path: "print-email",
+  element: <PrintEmailPage />,
       },
       {
-        path: "preview",
-        element: <PreviewInvoicesPage />,
+        index: true,
+        element: <GenerateInvoicesPage />,
       },
       {
         path: "archive",

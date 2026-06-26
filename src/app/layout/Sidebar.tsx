@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Eye, FileText, Settings, Users, Archive } from "lucide-react";
+import { Archive, FileText, Mail, Settings, Users } from "lucide-react";
 
 const navItems = [
   {
@@ -8,9 +8,9 @@ const navItems = [
     icon: FileText,
   },
   {
-    label: "Preview Invoices",
-    path: "/preview",
-    icon: Eye,
+    label: "Print and Email",
+    path: "/print-email",
+    icon: Mail,
   },
   {
     label: "Archive",
@@ -33,17 +33,17 @@ export function Sidebar() {
   return (
     <aside
       className="
-    m-4
-    flex
-    w-68
-    flex-col
-    rounded-3xl
-    border
-    border-zinc-800
-    bg-zinc-900/80
-    backdrop-blur-xl
-    shadow-2xl
-  "
+        m-4
+        flex
+        w-68
+        flex-col
+        rounded-3xl
+        border
+        border-zinc-800
+        bg-zinc-900/80
+        backdrop-blur-xl
+        shadow-2xl
+      "
     >
       <div className="p-6">
         <h1 className="text-xl font-semibold tracking-tight text-zinc-100">
@@ -66,13 +66,13 @@ export function Sidebar() {
                 to={item.path}
                 className={({ isActive }) =>
                   `
-                  flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
-                  ${
-                    isActive
-                      ? "bg-zinc-800/90 ring-1ring-zinc-700 text-white shadow-sm"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100"
-                  }
-                `
+                    flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
+                    ${
+                      isActive
+                        ? "bg-zinc-800/90 text-white shadow-sm ring-1 ring-zinc-700"
+                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100"
+                    }
+                  `
                 }
               >
                 <Icon className="h-4 w-4" />
