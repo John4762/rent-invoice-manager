@@ -3,7 +3,6 @@ use lettre::message::{header::ContentType, Attachment, Mailbox, Message, MultiPa
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{SmtpTransport, Transport};
 use serde::Deserialize;
-use std::env;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -18,6 +17,7 @@ pub struct EmailAttachmentPayload {
 pub struct SendInvoiceEmailPayload {
     pub sender_email: String,
     pub recipient_email: String,
+    pub gmail_app_password: String,
     pub subject: String,
     pub body: String,
     pub attachments: Vec<EmailAttachmentPayload>,
@@ -32,19 +32,20 @@ pub async fn send_invoice_email(payload: SendInvoiceEmailPayload) -> Result<(), 
 
 fn send_invoice_email_sync(payload: SendInvoiceEmailPayload) -> Result<(), String> {
     if payload.sender_email.trim().is_empty() {
-        return Err("Sender email is missing.".to_string());
+        return Err("Sender email is missing in Settings.".to_string());
     }
 
     if payload.recipient_email.trim().is_empty() {
-        return Err("Recipient email is missing.".to_string());
+        return Err("Recipient email is missing in Settings.".to_string());
+    }
+
+    if payload.gmail_app_password.trim().is_empty() {
+        return Err("Gmail app password is missing in Settings.".to_string());
     }
 
     if payload.attachments.is_empty() {
         return Err("No invoice attachments were provided.".to_string());
     }
-
-    let smtp_password = env::var("SMTP_PASSWORD")
-        .map_err(|_| "SMTP_PASSWORD environment variable is missing.".to_string())?;
 
     let from_mailbox: Mailbox = payload
         .sender_email
@@ -78,12 +79,12 @@ fn send_invoice_email_sync(payload: SendInvoiceEmailPayload) -> Result<(), Strin
         .multipart(multipart)
         .map_err(|error| format!("Could not build email: {error}"))?;
 
-    let credentials = Credentials::new(payload.sender_email, smtp_password);
+    let credentials = Credentials::new(payload.sender_email, payload.gmail_app_password);
 
     let mailer = SmtpTransport::relay("smtp.gmail.com")
-    .map_err(|error| format!("Could not connect to Gmail SMTP: {error}"))?
-    .credentials(credentials)
-    .build();
+        .map_err(|error| format!("Could not connect to Gmail SMTP: {error}"))?
+        .credentials(credentials)
+        .build();
 
     mailer
         .send(&email)

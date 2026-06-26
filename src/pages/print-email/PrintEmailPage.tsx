@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { pdf } from "@react-pdf/renderer";
 import { Buffer } from "buffer";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/common/PageHeader";
 import { getGeneratedInvoiceRuns } from "@/lib/generatedInvoiceStore";
@@ -21,8 +21,27 @@ type EmailAttachmentPayload = {
   contentType: string;
 };
 
-const MOCK_SENDER_EMAIL = "senderemail@gmail.com";//this is what its connected to right now
-const MOCK_RECIPIENT_EMAIL = "recipient@gmail.com";//this is what its connected to right now
+type AppSettings = {
+  landlord_name: string;
+  pan: string;
+  gstin: string;
+  address: string;
+  invoice_prefix: string;
+  recipient_email: string;
+  sender_email: string;
+  gmail_app_password: string;
+};
+
+const EMPTY_SETTINGS: AppSettings = {
+  landlord_name: "",
+  pan: "",
+  gstin: "",
+  address: "",
+  invoice_prefix: "",
+  recipient_email: "",
+  sender_email: "",
+  gmail_app_password: "",
+};
 
 const globalWithBuffer = globalThis as typeof globalThis & {
   Buffer?: typeof Buffer;
@@ -30,6 +49,10 @@ const globalWithBuffer = globalThis as typeof globalThis & {
 
 if (!globalWithBuffer.Buffer) {
   globalWithBuffer.Buffer = Buffer;
+}
+
+async function loadSettings() {
+  return await invoke<AppSettings | null>("get_settings");
 }
 
 function wait(milliseconds: number) {
@@ -186,6 +209,40 @@ export function PrintEmailPage() {
   >(() => getInitialInvoiceEmailStates(invoices));
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [settings, setSettings] = useState<AppSettings>(EMPTY_SETTINGS);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchSettings() {
+      try {
+        const loadedSettings = await loadSettings();
+
+        if (!mounted) {
+          return;
+        }
+
+        if (loadedSettings) {
+          setSettings(loadedSettings);
+        }
+      } catch (error) {
+        if (mounted) {
+          setActionMessage(`Could not load Settings: ${String(error)}`);
+        }
+      } finally {
+        if (mounted) {
+          setSettingsLoaded(true);
+        }
+      }
+    }
+
+    fetchSettings();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const overallStatus = getOverallStatus(invoiceEmailStates);
   const sending = overallStatus === "sending";
@@ -222,12 +279,52 @@ export function PrintEmailPage() {
       return;
     }
 
+    if (!settingsLoaded) {
+      setActionMessage("Settings are still loading.");
+      return;
+    }
+
+    if (!settings.sender_email.trim()) {
+      setActionMessage("Sender email is missing in Settings.");
+      return;
+    }
+
+    if (!settings.recipient_email.trim()) {
+      setActionMessage("Recipient email is missing in Settings.");
+      return;
+    }
+
+    if (!settings.gmail_app_password.trim()) {
+      setActionMessage("Gmail app password is missing in Settings.");
+      return;
+    }
+
     setShowConfirmModal(true);
   }
 
   async function sendInvoicesByEmail(targetInvoices: RentalInvoiceDraft[]) {
     if (targetInvoices.length === 0) {
       setActionMessage("No invoices available to send.");
+      return;
+    }
+
+    if (!settingsLoaded) {
+      setActionMessage("Settings are still loading.");
+      return;
+    }
+
+    if (!settings.sender_email.trim()) {
+      setActionMessage("Sender email is missing in Settings.");
+      return;
+    }
+
+    if (!settings.recipient_email.trim()) {
+      setActionMessage("Recipient email is missing in Settings.");
+      return;
+    }
+
+    if (!settings.gmail_app_password.trim()) {
+      setActionMessage("Gmail app password is missing in Settings.");
       return;
     }
 
@@ -239,8 +336,9 @@ export function PrintEmailPage() {
 
       await invoke("send_invoice_email", {
         payload: {
-          senderEmail: MOCK_SENDER_EMAIL,
-          recipientEmail: MOCK_RECIPIENT_EMAIL,
+          senderEmail: settings.sender_email,
+          recipientEmail: settings.recipient_email,
+          gmailAppPassword: settings.gmail_app_password,
           subject: "Rental invoices",
           body: "Please find attached the generated rental invoices.",
           attachments,
@@ -312,7 +410,7 @@ export function PrintEmailPage() {
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
                 <p className="text-xs text-zinc-500">Recipient Email</p>
                 <p className="mt-2 text-sm font-semibold text-zinc-100">
-                  {MOCK_RECIPIENT_EMAIL}
+                  {settings.recipient_email || "Not configured"}
                 </p>
               </div>
 
@@ -477,7 +575,7 @@ export function PrintEmailPage() {
             <p className="mt-3 text-sm text-zinc-400">
               This will send one email to{" "}
               <span className="font-semibold text-zinc-100">
-                {MOCK_RECIPIENT_EMAIL}
+                {settings.recipient_email || "Not configured"}
               </span>{" "}
               with all not-sent or failed invoices attached.
             </p>
