@@ -32,6 +32,44 @@ CREATE TABLE IF NOT EXISTS invoice_runs (
     generated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+
+    landlord_name TEXT NOT NULL,
+    pan TEXT NOT NULL,
+    gstin TEXT NOT NULL,
+    address TEXT NOT NULL,
+
+    invoice_prefix TEXT NOT NULL,
+
+    recipient_email TEXT NOT NULL,
+    sender_email TEXT NOT NULL,
+    gmail_app_password TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO settings (
+    id,
+    landlord_name,
+    pan,
+    gstin,
+    address,
+    invoice_prefix,
+    recipient_email,
+    sender_email,
+    gmail_app_password
+)
+VALUES (
+    1,
+    '',
+    '',
+    '',
+    '',
+    'AJ',
+    '',
+    '',
+    ''
+);
+
 CREATE TABLE IF NOT EXISTS archived_invoices (
     id TEXT PRIMARY KEY,
 

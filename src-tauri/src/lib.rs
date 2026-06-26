@@ -11,6 +11,8 @@ use commands::archive_commands::seed_archive_data;
 use commands::archive_commands::get_invoices_for_month;
 use commands::archive_commands::get_invoice_details;
 use commands::archive_commands::open_pdf;
+use commands::settings_commands::get_settings;
+use commands::settings_commands::save_settings;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -36,7 +38,9 @@ pub fn run() {
                 get_invoices_for_month,
                 get_invoice_details,
                 open_pdf,
-                seed_archive_data
+                seed_archive_data,
+                get_settings,
+                save_settings,
             ]
         )
         .run(tauri::generate_context!())
