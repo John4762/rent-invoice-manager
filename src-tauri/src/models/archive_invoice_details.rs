@@ -16,4 +16,6 @@ pub struct ArchiveInvoiceDetails {
     pub generated_at: String,
 
     pub email_sent: bool,
+
+    pub pdf_path: String,
 }

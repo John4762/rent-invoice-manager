@@ -123,7 +123,9 @@ impl ArchiveRepository {
 
                 ai.generated_at,
 
-                ir.email_sent
+                ir.email_sent,
+
+                ai.pdf_path
 
             FROM archived_invoices ai
             INNER JOIN invoice_runs ir
@@ -152,6 +154,8 @@ impl ArchiveRepository {
                     generated_at: row.get(7)?,
 
                     email_sent: row.get::<_, i32>(8)? == 1,
+
+                    pdf_path: row.get(9)?,
                 },
             )
         },

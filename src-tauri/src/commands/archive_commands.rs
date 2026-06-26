@@ -2,6 +2,8 @@ use crate::database::connection::get_connection;
 use crate::models::archive_month::ArchiveMonth;
 use crate::repositories::archive_repository::ArchiveRepository;
 use crate::models::archive_invoice_details::ArchiveInvoiceDetails;
+use tauri::AppHandle;
+use tauri_plugin_opener::OpenerExt;
 
 #[tauri::command]
 pub fn get_available_months() -> Vec<ArchiveMonth> {
@@ -36,6 +38,17 @@ pub fn get_invoice_details(
         &conn,
         invoice_number,
     )
+}
+
+#[tauri::command]
+pub fn open_pdf(
+    app: AppHandle,
+    pdf_path: String,
+) -> Result<(), String> {
+
+    app.opener()
+        .open_path(pdf_path, None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 
