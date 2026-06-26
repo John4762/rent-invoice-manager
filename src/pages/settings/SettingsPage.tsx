@@ -11,17 +11,21 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+
 async function testArchive() {
   try {
-    console.log("Before invoke");
+    await invoke("seed_archive_data");
 
-    const count = await invoke<number>("get_archive_invoice_count");
+    const invoice = await invoke(
+      "get_invoice_details",
+      {
+        invoiceNumber: "AJ/CP/3/26-27",
+      }
+    );
 
-    console.log("After invoke");
+    console.log(invoice);
 
-    console.log("Count:", count);
-
-    alert(`Archive Count: ${count}`);
+    alert(JSON.stringify(invoice, null, 2));
   } catch (error) {
     console.error(error);
 
