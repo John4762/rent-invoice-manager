@@ -60,49 +60,49 @@ impl ArchiveRepository {
             .collect()
     }
 
-    pub fn get_invoices_for_month(
-        conn: &Connection,
-        month: i32,
-        year: i32,
-    ) -> Vec<ArchiveInvoice> {
-        let mut stmt = conn
-            .prepare(
-                "
-                SELECT
-                    ai.tenant_name_snapshot,
-                    ai.invoice_number,
-                    ai.grand_total,
-                    ir.email_sent
-                FROM archived_invoices ai
-                INNER JOIN invoice_runs ir
-                    ON ir.id = ai.invoice_run_id
-                WHERE ir.cycle_month = ?
-                  AND ir.cycle_year = ?
-                ORDER BY ai.tenant_name_snapshot
-                ",
-            )
-            .unwrap();
+pub fn get_invoices_for_month(
+    conn: &Connection,
+    month: i32,
+    year: i32,
+) -> Vec<ArchiveInvoice> {
+    let mut stmt = conn
+        .prepare(
+            "
+            SELECT
+                ai.tenant_name_snapshot,
+                ai.invoice_number,
+                ai.grand_total,
+                ai.email_status
+            FROM archived_invoices ai
+            INNER JOIN invoice_runs ir
+                ON ir.id = ai.invoice_run_id
+            WHERE ir.cycle_month = ?
+              AND ir.cycle_year = ?
+            ORDER BY ai.tenant_name_snapshot
+            ",
+        )
+        .unwrap();
 
-        let invoices = stmt
-            .query_map(
-                [month, year],
-                |row| {
-                    Ok(ArchiveInvoice {
-                        tenant_name: row.get(0)?,
-                        invoice_number: row.get(1)?,
-                        total_amount: row.get(2)?,
-                        email_sent: row.get::<_, i32>(3)? == 1,
-                    })
-                },
-            )
-            .unwrap();
+    let invoices = stmt
+        .query_map(
+            [month, year],
+            |row| {
+                Ok(ArchiveInvoice {
+                    tenant_name: row.get(0)?,
+                    invoice_number: row.get(1)?,
+                    total_amount: row.get(2)?,
+                    email_status: row.get(3)?,
+                })
+            },
+        )
+        .unwrap();
 
-        invoices
-            .map(|i| i.unwrap())
-            .collect()
-    }
+    invoices
+        .map(|i| i.unwrap())
+        .collect()
+}
 
-    pub fn get_invoice_details(
+pub fn get_invoice_details(
     conn: &Connection,
     invoice_number: String,
 ) -> Option<crate::models::archive_invoice_details::ArchiveInvoiceDetails> {
@@ -123,13 +123,13 @@ impl ArchiveRepository {
 
                 ai.generated_at,
 
-                ir.email_sent,
+                ai.email_status,
+                ai.email_sent_at,
+                ai.email_error,
 
                 ai.pdf_path
 
             FROM archived_invoices ai
-            INNER JOIN invoice_runs ir
-                ON ir.id = ai.invoice_run_id
             WHERE ai.invoice_number = ?
             ",
         )
@@ -153,13 +153,16 @@ impl ArchiveRepository {
 
                     generated_at: row.get(7)?,
 
-                    email_sent: row.get::<_, i32>(8)? == 1,
+                    email_status: row.get(8)?,
+                    email_sent_at: row.get(9)?,
+                    email_error: row.get(10)?,
 
-                    pdf_path: row.get(9)?,
+                    pdf_path: row.get(11)?,
                 },
             )
         },
     )
     .ok()
 }
+
 }

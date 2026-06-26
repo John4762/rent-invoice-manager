@@ -1,7 +1,8 @@
 use crate::database::connection::get_connection;
+use crate::models::archive_invoice::ArchiveInvoice;
+use crate::models::archive_invoice_details::ArchiveInvoiceDetails;
 use crate::models::archive_month::ArchiveMonth;
 use crate::repositories::archive_repository::ArchiveRepository;
-use crate::models::archive_invoice_details::ArchiveInvoiceDetails;
 use tauri::AppHandle;
 use tauri_plugin_opener::OpenerExt;
 
@@ -11,8 +12,6 @@ pub fn get_available_months() -> Vec<ArchiveMonth> {
 
     ArchiveRepository::get_available_months(&conn)
 }
-
-use crate::models::archive_invoice::ArchiveInvoice;
 
 #[tauri::command]
 pub fn get_invoices_for_month(
@@ -45,12 +44,10 @@ pub fn open_pdf(
     app: AppHandle,
     pdf_path: String,
 ) -> Result<(), String> {
-
     app.opener()
         .open_path(pdf_path, None::<&str>)
         .map_err(|e| e.to_string())
 }
-
 
 #[tauri::command]
 pub fn seed_archive_data() {
@@ -64,16 +61,12 @@ pub fn seed_archive_data() {
             id,
             cycle_month,
             cycle_year,
-            generated_at,
-            email_sent,
-            email_sent_at
+            generated_at
         )
         VALUES (
             'run_june_2026',
             6,
             2026,
-            '2026-06-02',
-            1,
             '2026-06-02'
         )
         ",
@@ -87,16 +80,12 @@ pub fn seed_archive_data() {
             id,
             cycle_month,
             cycle_year,
-            generated_at,
-            email_sent,
-            email_sent_at
+            generated_at
         )
         VALUES (
             'run_may_2026',
             5,
             2026,
-            '2026-05-02',
-            1,
             '2026-05-02'
         )
         ",
@@ -110,16 +99,12 @@ pub fn seed_archive_data() {
             id,
             cycle_month,
             cycle_year,
-            generated_at,
-            email_sent,
-            email_sent_at
+            generated_at
         )
         VALUES (
             'run_april_2026',
             4,
             2026,
-            '2026-04-02',
-            1,
             '2026-04-02'
         )
         ",
@@ -148,6 +133,9 @@ pub fn seed_archive_data() {
             sgst_amount,
             grand_total,
             pdf_path,
+            email_status,
+            email_sent_at,
+            email_error,
             generated_at
         )
         VALUES (
@@ -167,6 +155,9 @@ pub fn seed_archive_data() {
             2250,
             29500,
             'archive/june/cp.pdf',
+            'sent',
+            '2026-06-02',
+            NULL,
             '2026-06-02'
         )
         ",
@@ -193,6 +184,9 @@ pub fn seed_archive_data() {
             sgst_amount,
             grand_total,
             pdf_path,
+            email_status,
+            email_sent_at,
+            email_error,
             generated_at
         )
         VALUES (
@@ -212,6 +206,9 @@ pub fn seed_archive_data() {
             3600,
             47200,
             'archive/june/xyz.pdf',
+            'failed',
+            NULL,
+            'SMTP Authentication Failed',
             '2026-06-02'
         )
         ",
@@ -238,6 +235,9 @@ pub fn seed_archive_data() {
             sgst_amount,
             grand_total,
             pdf_path,
+            email_status,
+            email_sent_at,
+            email_error,
             generated_at
         )
         VALUES (
@@ -257,6 +257,9 @@ pub fn seed_archive_data() {
             2250,
             29500,
             'archive/may/cp.pdf',
+            'sent',
+            '2026-05-02',
+            NULL,
             '2026-05-02'
         )
         ",
@@ -283,6 +286,9 @@ pub fn seed_archive_data() {
             sgst_amount,
             grand_total,
             pdf_path,
+            email_status,
+            email_sent_at,
+            email_error,
             generated_at
         )
         VALUES (
@@ -302,6 +308,9 @@ pub fn seed_archive_data() {
             2250,
             29500,
             'archive/april/cp.pdf',
+            'sent',
+            '2026-04-02',
+            NULL,
             '2026-04-02'
         )
         ",

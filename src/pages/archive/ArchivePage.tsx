@@ -168,12 +168,14 @@ export function ArchivePage() {
                         </div>
 
                         <div className="mt-2 text-xs">
-                          {invoice.email_sent ? (
+                          {invoice.email_status === "sent" ? (
                             <span className="text-green-400">✓ Email Sent</span>
-                          ) : (
+                          ) : invoice.email_status === "failed" ? (
                             <span className="text-yellow-400">
                               ⚠ Email Failed
                             </span>
+                          ) : (
+                            <span className="text-zinc-400">⏳ Pending</span>
                           )}
                         </div>
                       </button>
@@ -253,42 +255,40 @@ export function ArchivePage() {
                   </div>
 
                   <div>
-                    {selectedInvoice.email_sent ? (
+                    {selectedInvoice.email_status === "sent" ? (
                       <span className="rounded-full bg-green-500/10 px-3 py-2 text-green-400">
                         ✓ Email Sent
                       </span>
-                    ) : (
+                    ) : selectedInvoice.email_status === "failed" ? (
                       <span className="rounded-full bg-yellow-500/10 px-3 py-2 text-yellow-400">
                         ⚠ Email Failed
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-zinc-500/10 px-3 py-2 text-zinc-300">
+                        ⏳ Pending
                       </span>
                     )}
                   </div>
                 </div>
 
                 <div className="mt-8 flex gap-3">
-<button
-  onClick={async () => {
-    try {
-      console.log(
-        "PDF Path:",
-        selectedInvoice?.pdf_path
-      );
+                  <button
+                    onClick={async () => {
+                      try {
+                        console.log("PDF Path:", selectedInvoice?.pdf_path);
 
-      await invoke("open_pdf", {
-        pdfPath:
-          selectedInvoice?.pdf_path,
-      });
+                        await invoke("open_pdf", {
+                          pdfPath: selectedInvoice?.pdf_path,
+                        });
 
-      alert("Open command sent");
-    } catch (error) {
-      console.error(error);
+                        alert("Open command sent");
+                      } catch (error) {
+                        console.error(error);
 
-      alert(
-        `ERROR:\n${JSON.stringify(error)}`
-      );
-    }
-  }}
-  className="
+                        alert(`ERROR:\n${JSON.stringify(error)}`);
+                      }
+                    }}
+                    className="
     rounded-lg
     bg-white
     px-5
@@ -296,9 +296,9 @@ export function ArchivePage() {
     font-medium
     text-black
   "
->
-  Open PDF
-</button>
+                  >
+                    Open PDF
+                  </button>
 
                   <button
                     className="
