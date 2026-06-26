@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
 import { Pencil } from "lucide-react";
 import { AppContainer } from "@/components/common/AppContainer";
@@ -9,6 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+async function loadSettings() {
+  return await invoke("get_settings");
+}
+
+async function saveSettings(settings: any) {
+  await invoke("save_settings", {
+    settings,
+  });
+}
 
 export function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -26,6 +37,32 @@ export function SettingsPage() {
   const [senderEmail, setSenderEmail] = useState("");
 
   const [gmailAppPassword, setGmailAppPassword] = useState("");
+
+  useEffect(() => {
+    async function fetchSettings() {
+      const settings = await loadSettings();
+
+      if (!settings) {
+        return;
+      }
+
+      const s = settings as any;
+
+      setLandlordName(s.landlord_name);
+      setPan(s.pan);
+      setGstin(s.gstin);
+      setAddress(s.address);
+
+      setInvoicePrefix(s.invoice_prefix);
+
+      setRecipientEmail(s.recipient_email);
+      setSenderEmail(s.sender_email);
+
+      setGmailAppPassword(s.gmail_app_password);
+    }
+
+    fetchSettings();
+  }, []);
 
   return (
     <AppContainer>
@@ -205,7 +242,27 @@ export function SettingsPage() {
 
               <Button
                 size="lg"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={async () => {
+                  if (isEditing) {
+                    await saveSettings({
+                      landlord_name: landlordName,
+
+                      pan,
+                      gstin,
+                      address,
+
+                      invoice_prefix: invoicePrefix,
+
+                      recipient_email: recipientEmail,
+
+                      sender_email: senderEmail,
+
+                      gmail_app_password: gmailAppPassword,
+                    });
+                  }
+
+                  setIsEditing(!isEditing);
+                }}
                 className={
                   isEditing
                     ? "bg-white text-black hover:bg-zinc-200"

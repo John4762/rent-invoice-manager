@@ -9,6 +9,8 @@ use commands::archive_commands::get_invoices_for_month;
 use commands::archive_commands::open_pdf;
 use commands::archive_commands::seed_archive_data;
 use commands::email_commands::send_invoice_email;
+use commands::settings_commands::get_settings;
+use commands::settings_commands::save_settings;
 use commands::tenant_commands::get_tenant_count;
 use database::connection::get_connection;
 use database::migrations::run_migrations;
@@ -38,7 +40,9 @@ pub fn run() {
                 get_invoice_details,
                 open_pdf,
                 seed_archive_data,
-                send_invoice_email
+                send_invoice_email,
+                get_settings,
+                save_settings
             ]
         )
         .run(tauri::generate_context!())
