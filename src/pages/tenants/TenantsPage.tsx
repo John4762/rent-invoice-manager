@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { DeleteTenantDialog } from "./DeleteTenantDialog";
 
 interface Tenant {
   id: string;
@@ -58,6 +59,7 @@ export function TenantsPage() {
   const [selectedTenantId, setSelectedTenantId] = useState("");
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const selectedTenant = useMemo(
@@ -146,40 +148,35 @@ export function TenantsPage() {
   }
 
   async function toggleTenantStatus() {
-  if (!selectedTenant) return;
+    if (!selectedTenant) return;
 
-  try {
-    await invoke("update_tenant", {
-      tenant: {
-        id: selectedTenant.id,
+    try {
+      await invoke("update_tenant", {
+        tenant: {
+          id: selectedTenant.id,
 
-        tenant_name: selectedTenant.tenantName,
-        tenant_code: selectedTenant.tenantCode,
-        tenant_gstin: selectedTenant.tenantGstin,
+          tenant_name: selectedTenant.tenantName,
+          tenant_code: selectedTenant.tenantCode,
+          tenant_gstin: selectedTenant.tenantGstin,
 
-        tenant_address: selectedTenant.tenantAddress,
-        location_address:
-          selectedTenant.locationAddress,
+          tenant_address: selectedTenant.tenantAddress,
+          location_address: selectedTenant.locationAddress,
 
-        rent_amount:
-          selectedTenant.rentAmount,
+          rent_amount: selectedTenant.rentAmount,
 
-        cgst_percent:
-          selectedTenant.cgstPercent,
+          cgst_percent: selectedTenant.cgstPercent,
 
-        sgst_percent:
-          selectedTenant.sgstPercent,
+          sgst_percent: selectedTenant.sgstPercent,
 
-        active:
-          !selectedTenant.active,
-      },
-    });
+          active: !selectedTenant.active,
+        },
+      });
 
-    await loadTenants();
-  } catch (error) {
-    console.error(error);
+      await loadTenants();
+    } catch (error) {
+      console.error(error);
+    }
   }
-}
 
   async function saveTenant() {
     if (!selectedTenant) return;
@@ -215,6 +212,31 @@ export function TenantsPage() {
       alert("Failed to update tenant");
     }
   }
+
+async function deleteTenant() {
+  if (!selectedTenant) return;
+
+  try {
+    await invoke("delete_tenant", {
+      tenantId: selectedTenant.id,
+    });
+
+    await loadTenants();
+
+    const remainingTenant = tenants.find(
+      (tenant) => tenant.id !== selectedTenant.id,
+    );
+
+    if (remainingTenant) {
+      setSelectedTenantId(remainingTenant.id);
+    }
+
+    console.log("TENANT DELETED");
+  } catch (error) {
+    console.error(error);
+    alert("Failed to delete tenant");
+  }
+}
 
   return (
     <AppContainer>
@@ -321,14 +343,15 @@ export function TenantsPage() {
                   <Button
                     variant="outline"
                     className="
-      w-36
-      border-red-500/30
-      bg-red-500/10
-      text-red-400
-      hover:bg-red-500/20
-      hover:text-white
-      hover:border-red-500/50
-    "
+    w-36
+    border-red-500/30
+    bg-red-500/10
+    text-red-400
+    hover:bg-red-500/20
+    hover:text-white
+    hover:border-red-500/50
+  "
+                    onClick={() => setDeleteDialogOpen(true)}
                   >
                     Delete
                   </Button>
@@ -519,6 +542,15 @@ export function TenantsPage() {
           await loadTenants();
         }}
       />
+      <DeleteTenantDialog
+  open={deleteDialogOpen}
+  tenantName={selectedTenant?.tenantName ?? ""}
+  onCancel={() => setDeleteDialogOpen(false)}
+  onConfirm={async () => {
+    setDeleteDialogOpen(false);
+    await deleteTenant();
+  }}
+/>
     </AppContainer>
   );
 }

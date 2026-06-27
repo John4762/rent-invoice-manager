@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 async function loadSettings() {
   return await invoke("get_settings");
@@ -70,17 +71,6 @@ export function SettingsPage() {
         title="Settings"
         description="Manage landlord, invoice and email configuration."
       />
-
-      {/*TEST BUTTON FOR SEEDING ARCHIVE DATA TO BE REMOVED LATER*/}
-      <Button
-        variant="outline"
-        onClick={async () => {
-          await invoke("seed_archive_data");
-        }}
-      >
-        Seed Archive Data
-      </Button>
-      {/*TEST BUTTON FOR SEEDING ARCHIVE DATA TO BE REMOVED LATER*/}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="space-y-6">
@@ -255,6 +245,31 @@ export function SettingsPage() {
                 size="lg"
                 onClick={async () => {
                   if (isEditing) {
+                    if (!landlordName.trim()) {
+                      toast.error("Landlord Name is required");
+                      return;
+                    }
+
+                    if (!pan.trim()) {
+                      toast.error("PAN is required");
+                      return;
+                    }
+
+                    if (!gstin.trim()) {
+                      toast.error("GSTIN is required");
+                      return;
+                    }
+
+                    if (!address.trim()) {
+                      toast.error("Address is required");
+                      return;
+                    }
+
+                    if (!invoicePrefix.trim()) {
+                      toast.error("Invoice Prefix is required");
+                      return;
+                    }
+
                     await saveSettings({
                       landlord_name: landlordName,
 
@@ -270,6 +285,8 @@ export function SettingsPage() {
 
                       gmail_app_password: gmailAppPassword,
                     });
+
+                    toast.success("Settings saved successfully");
                   }
 
                   setIsEditing(!isEditing);

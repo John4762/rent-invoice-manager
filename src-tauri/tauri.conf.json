@@ -12,7 +12,8 @@
   "app": {
     "windows": [
       {
-        "title": "rent-invoice-manager",
+        "maximized": true,
+        "title": "Rent Invoice Manager",
         "width": 800,
         "height": 600
       }
