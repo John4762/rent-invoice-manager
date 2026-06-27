@@ -71,6 +71,17 @@ export function SettingsPage() {
         description="Manage landlord, invoice and email configuration."
       />
 
+      //TEST BUTTON FOR SEEDING ARCHIVE DATA TO BE REMOVED LATER
+      <Button
+        variant="outline"
+        onClick={async () => {
+          await invoke("seed_archive_data");
+        }}
+      >
+        Seed Archive Data
+      </Button>
+      //TEST BUTTON FOR SEEDING ARCHIVE DATA TO BE REMOVED LATER
+
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="space-y-6">
           <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
