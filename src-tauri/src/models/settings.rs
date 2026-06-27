@@ -8,8 +8,9 @@ pub struct Settings {
     pub address: String,
 
     pub invoice_prefix: String,
-
+    pub sac_code: String,
     pub recipient_email: String,
     pub sender_email: String,
     pub gmail_app_password: String,
+
 }
