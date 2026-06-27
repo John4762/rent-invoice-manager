@@ -32,6 +32,21 @@ type AppSettings = {
   gmail_app_password: string;
 };
 
+type TenantRecord = {
+  id: string;
+  tenant_name: string;
+  tenant_code: string;
+  tenant_gstin: string;
+  tenant_address: string;
+  location_address: string;
+  rent_amount: number;
+  cgst_percent: number;
+  sgst_percent: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 const EMPTY_SETTINGS: AppSettings = {
   landlord_name: "",
   pan: "",
@@ -53,6 +68,14 @@ if (!globalWithBuffer.Buffer) {
 
 async function loadSettings() {
   return await invoke<AppSettings | null>("get_settings");
+}
+
+async function loadTenants() {
+  return await invoke<TenantRecord[]>("get_tenants");
+}
+
+function normaliseTenantCode(code: string): string {
+  return code.trim().toUpperCase();
 }
 
 function wait(milliseconds: number) {
@@ -202,11 +225,15 @@ export function PrintEmailPage() {
     return runs[0] ?? null;
   }, []);
 
-  const invoices: RentalInvoiceDraft[] = generatedRun?.invoices ?? [];
+  const rawInvoices: RentalInvoiceDraft[] = generatedRun?.invoices ?? [];
 
+  const [activeTenantCodes, setActiveTenantCodes] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [tenantDataLoaded, setTenantDataLoaded] = useState(false);
   const [invoiceEmailStates, setInvoiceEmailStates] = useState<
     Record<string, InvoiceEmailState>
-  >(() => getInitialInvoiceEmailStates(invoices));
+  >(() => getInitialInvoiceEmailStates(rawInvoices));
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(EMPTY_SETTINGS);
@@ -244,7 +271,64 @@ export function PrintEmailPage() {
     };
   }, []);
 
-  const overallStatus = getOverallStatus(invoiceEmailStates);
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchTenants() {
+      try {
+        const tenants = await loadTenants();
+
+        if (!mounted) {
+          return;
+        }
+
+        setActiveTenantCodes(
+  new Set(
+    tenants
+      .filter((tenant) => tenant.active)
+      .map((tenant) => normaliseTenantCode(tenant.tenant_code)),
+  ),
+);
+      } catch (error) {
+        if (mounted) {
+          setActionMessage(`Could not load active tenants: ${String(error)}`);
+        }
+      } finally {
+        if (mounted) {
+          setTenantDataLoaded(true);
+        }
+      }
+    }
+
+    fetchTenants();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const invoices = useMemo(() => {
+    if (!tenantDataLoaded) {
+      return rawInvoices;
+    }
+
+    return rawInvoices.filter((invoice) =>
+  activeTenantCodes.has(normaliseTenantCode(invoice.tenant.tenantCode)),
+);
+  }, [activeTenantCodes, rawInvoices, tenantDataLoaded]);
+
+  const overallStatus = getOverallStatus(
+    invoices.reduce<Record<string, InvoiceEmailState>>((states, invoice) => {
+      states[invoice.invoiceNumber] = invoiceEmailStates[
+        invoice.invoiceNumber
+      ] ?? {
+        status: "not_sent",
+      };
+
+      return states;
+    }, {}),
+  );
+
   const sending = overallStatus === "sending";
   const allSent = overallStatus === "sent";
 
@@ -253,6 +337,8 @@ export function PrintEmailPage() {
 
     return state?.status === "not_sent" || state?.status === "failed";
   });
+
+  const showRetrySendButton = overallStatus === "failed";
 
   function setInvoicesToStatus(
     targetInvoices: RentalInvoiceDraft[],
@@ -273,29 +359,42 @@ export function PrintEmailPage() {
     });
   }
 
-  function handleOpenConfirmModal() {
+  function validateBeforeSend() {
     if (invoices.length === 0) {
-      setActionMessage("No invoices available to send.");
-      return;
+      setActionMessage("No active invoices available to send.");
+      return false;
+    }
+
+    if (!tenantDataLoaded) {
+      setActionMessage("Active tenant data is still loading.");
+      return false;
     }
 
     if (!settingsLoaded) {
       setActionMessage("Settings are still loading.");
-      return;
+      return false;
     }
 
     if (!settings.sender_email.trim()) {
       setActionMessage("Sender email is missing in Settings.");
-      return;
+      return false;
     }
 
     if (!settings.recipient_email.trim()) {
       setActionMessage("Recipient email is missing in Settings.");
-      return;
+      return false;
     }
 
     if (!settings.gmail_app_password.trim()) {
       setActionMessage("Gmail app password is missing in Settings.");
+      return false;
+    }
+
+    return true;
+  }
+
+  function handleOpenConfirmModal() {
+    if (!validateBeforeSend()) {
       return;
     }
 
@@ -303,28 +402,12 @@ export function PrintEmailPage() {
   }
 
   async function sendInvoicesByEmail(targetInvoices: RentalInvoiceDraft[]) {
+    if (!validateBeforeSend()) {
+      return;
+    }
+
     if (targetInvoices.length === 0) {
-      setActionMessage("No invoices available to send.");
-      return;
-    }
-
-    if (!settingsLoaded) {
-      setActionMessage("Settings are still loading.");
-      return;
-    }
-
-    if (!settings.sender_email.trim()) {
-      setActionMessage("Sender email is missing in Settings.");
-      return;
-    }
-
-    if (!settings.recipient_email.trim()) {
-      setActionMessage("Recipient email is missing in Settings.");
-      return;
-    }
-
-    if (!settings.gmail_app_password.trim()) {
-      setActionMessage("Gmail app password is missing in Settings.");
+      setActionMessage("No not-sent or failed invoices available to send.");
       return;
     }
 
@@ -359,8 +442,8 @@ export function PrintEmailPage() {
     await sendInvoicesByEmail(retryableInvoices);
   }
 
-  async function handleRetryInvoice(invoice: RentalInvoiceDraft) {
-    await sendInvoicesByEmail([invoice]);
+  async function handleRetrySend() {
+    await sendInvoicesByEmail(retryableInvoices);
   }
 
   function handlePrintAll() {
@@ -396,7 +479,7 @@ export function PrintEmailPage() {
         description="Final confirmation before sending invoices to the tax consultant."
       />
 
-      {!generatedRun || invoices.length === 0 ? (
+      {!generatedRun || rawInvoices.length === 0 ? (
         <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 text-sm text-zinc-400">
           No generated invoices found. Go to Generate Invoices and generate
           invoices first.
@@ -415,7 +498,7 @@ export function PrintEmailPage() {
               </div>
 
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
-                <p className="text-xs text-zinc-500">Invoice Count</p>
+                <p className="text-xs text-zinc-500">Active Invoice Count</p>
                 <p className="mt-2 text-sm font-semibold text-zinc-100">
                   {invoices.length}
                 </p>
@@ -442,6 +525,17 @@ export function PrintEmailPage() {
                 Back
               </button>
 
+              {showRetrySendButton ? (
+                <button
+                  type="button"
+                  onClick={handleRetrySend}
+                  disabled={sending}
+                  className="rounded-2xl border border-amber-900/60 px-8 py-3 text-sm font-semibold text-amber-400 transition hover:bg-amber-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Retry Send
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 onClick={handleOpenConfirmModal}
@@ -451,6 +545,11 @@ export function PrintEmailPage() {
                 {allSent ? "Sent" : "Confirm Send"}
               </button>
             </div>
+                        {actionMessage ? (
+              <div className="mt-6 rounded-2xl border border-amber-900/60 bg-amber-950/40 p-4 text-sm text-amber-400">
+                {actionMessage}
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8">
@@ -481,86 +580,72 @@ export function PrintEmailPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              {invoices.map((invoice) => {
-                const emailState = invoiceEmailStates[invoice.invoiceNumber] ?? {
-                  status: "not_sent",
-                };
+              {invoices.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 text-sm text-zinc-400">
+                  No active invoices available. Generate invoices again after
+                  confirming active tenants.
+                </div>
+              ) : (
+                invoices.map((invoice) => {
+                  const emailState = invoiceEmailStates[
+                    invoice.invoiceNumber
+                  ] ?? {
+                    status: "not_sent",
+                  };
 
-                const retryVisible =
-                  emailState.status === "not_sent" ||
-                  emailState.status === "failed";
-
-                return (
-                  <div
-                    key={invoice.invoiceNumber}
-                    className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 transition hover:bg-zinc-900"
-                  >
-                    <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-lg font-semibold text-zinc-100">
-                          {invoice.tenant.name}
-                        </p>
-
-                        <p className="mt-1 text-sm text-zinc-500">
-                          {invoice.invoiceNumber}
-                        </p>
-
-                        {emailState.error ? (
-                          <p className="mt-2 text-xs text-amber-400">
-                            {emailState.error}
+                  return (
+                    <div
+                      key={invoice.invoiceNumber}
+                      className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 transition hover:bg-zinc-900"
+                    >
+                      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-lg font-semibold text-zinc-100">
+                            {invoice.tenant.name}
                           </p>
-                        ) : null}
-                      </div>
 
-                      <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClassName(
-                          emailState.status,
-                        )}`}
-                      >
-                        {getStatusLabel(emailState.status)}
-                      </span>
+                          <p className="mt-1 text-sm text-zinc-500">
+                            {invoice.invoiceNumber}
+                          </p>
 
-                      <div className="flex flex-wrap gap-2">
-                        {retryVisible ? (
+                          
+                        </div>
+
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getStatusClassName(
+                            emailState.status,
+                          )}`}
+                        >
+                          {getStatusLabel(emailState.status)}
+                        </span>
+
+                        <div className="flex flex-wrap gap-2">
                           <button
                             type="button"
-                            disabled={sending}
-                            onClick={() => handleRetryInvoice(invoice)}
-                            className="rounded-xl border border-amber-900/60 px-5 py-3 text-sm font-semibold text-amber-400 transition hover:bg-amber-950/40 disabled:cursor-not-allowed disabled:opacity-40"
+                            disabled={!allSent}
+                            onClick={handlePrintSingle}
+                            className="rounded-xl border border-zinc-800 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
                           >
-                            Retry
+                            Print
                           </button>
-                        ) : null}
 
-                        <button
-                          type="button"
-                          disabled={!allSent}
-                          onClick={handlePrintSingle}
-                          className="rounded-xl border border-zinc-800 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Print
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={!allSent}
-                          onClick={() => handleDownloadSingle(invoice)}
-                          className="rounded-xl border border-zinc-800 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Download
-                        </button>
+                          <button
+                            type="button"
+                            disabled={!allSent}
+                            onClick={() => handleDownloadSingle(invoice)}
+                            className="rounded-xl border border-zinc-800 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            Download
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
 
-            {actionMessage ? (
-              <div className="mt-6 rounded-2xl border border-amber-900/60 bg-amber-950/40 p-4 text-sm text-amber-400">
-                {actionMessage}
-              </div>
-            ) : null}
+            
           </section>
         </div>
       )}
@@ -577,7 +662,7 @@ export function PrintEmailPage() {
               <span className="font-semibold text-zinc-100">
                 {settings.recipient_email || "Not configured"}
               </span>{" "}
-              with all not-sent or failed invoices attached.
+              with all active not-sent or failed invoices attached.
             </p>
 
             <div className="mt-6 flex justify-end gap-3">
