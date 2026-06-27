@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { DeleteTenantDialog } from "./DeleteTenantDialog";
 
 interface Tenant {
   id: string;
@@ -58,6 +59,7 @@ export function TenantsPage() {
   const [selectedTenantId, setSelectedTenantId] = useState("");
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const selectedTenant = useMemo(
@@ -212,43 +214,29 @@ export function TenantsPage() {
   }
 
 async function deleteTenant() {
-  console.log("DELETE CLICKED");
-  console.log("SELECTED TENANT", selectedTenant);
+  if (!selectedTenant) return;
 
-  if (!selectedTenant) {
-    console.log("NO TENANT SELECTED");
-    return;
-  }
+  try {
+    await invoke("delete_tenant", {
+      tenantId: selectedTenant.id,
+    });
 
-const confirmed = true;
+    await loadTenants();
 
-  console.log("CONFIRMED", confirmed);
+    const remainingTenant = tenants.find(
+      (tenant) => tenant.id !== selectedTenant.id,
+    );
 
-  if (!confirmed) return;
-
-    try {
-      await invoke("delete_tenant", {
-        tenantId: selectedTenant.id,
-      });
-
-      await loadTenants();
-
-      if (tenants.length > 1) {
-        const remainingTenant = tenants.find(
-          (tenant) => tenant.id !== selectedTenant.id,
-        );
-
-        if (remainingTenant) {
-          setSelectedTenantId(remainingTenant.id);
-        }
-      }
-
-      console.log("TENANT DELETED");
-    } catch (error) {
-      console.error(error);
-      alert("Failed to delete tenant");
+    if (remainingTenant) {
+      setSelectedTenantId(remainingTenant.id);
     }
+
+    console.log("TENANT DELETED");
+  } catch (error) {
+    console.error(error);
+    alert("Failed to delete tenant");
   }
+}
 
   return (
     <AppContainer>
@@ -363,7 +351,7 @@ const confirmed = true;
     hover:text-white
     hover:border-red-500/50
   "
-                    onClick={deleteTenant}
+                    onClick={() => setDeleteDialogOpen(true)}
                   >
                     Delete
                   </Button>
@@ -554,6 +542,15 @@ const confirmed = true;
           await loadTenants();
         }}
       />
+      <DeleteTenantDialog
+  open={deleteDialogOpen}
+  tenantName={selectedTenant?.tenantName ?? ""}
+  onCancel={() => setDeleteDialogOpen(false)}
+  onConfirm={async () => {
+    setDeleteDialogOpen(false);
+    await deleteTenant();
+  }}
+/>
     </AppContainer>
   );
 }
