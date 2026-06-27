@@ -1,5 +1,6 @@
 use crate::models::tenant::Tenant;
 use rusqlite::{params, Connection};
+use crate::models::update_tenant_request::UpdateTenantRequest;
 
 use crate::models::create_tenant_request::CreateTenantRequest;
 
@@ -14,6 +15,48 @@ impl TenantRepository {
         )
         .unwrap_or(0)
     }
+
+    pub fn update(
+    conn: &Connection,
+    tenant: UpdateTenantRequest,
+) {
+    let timestamp =
+        chrono::Local::now()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+
+    conn.execute(
+        "
+        UPDATE tenants
+        SET
+            tenant_name = ?,
+            tenant_code = ?,
+            tenant_gstin = ?,
+            tenant_address = ?,
+            location_address = ?,
+            rent_amount = ?,
+            cgst_percent = ?,
+            sgst_percent = ?,
+            active = ?,
+            updated_at = ?
+        WHERE id = ?
+        ",
+        params![
+            tenant.tenant_name,
+            tenant.tenant_code,
+            tenant.tenant_gstin,
+            tenant.tenant_address,
+            tenant.location_address,
+            tenant.rent_amount,
+            tenant.cgst_percent,
+            tenant.sgst_percent,
+            tenant.active,
+            timestamp,
+            tenant.id
+        ],
+    )
+    .unwrap();
+}
 
     pub fn create(
     conn: &Connection,

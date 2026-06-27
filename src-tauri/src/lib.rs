@@ -15,6 +15,7 @@ use commands::archive_commands::open_pdf;
 use commands::settings_commands::get_settings;
 use commands::settings_commands::save_settings;
 use commands::tenant_commands::create_tenant;
+use commands::tenant_commands::update_tenant;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -45,6 +46,7 @@ pub fn run() {
                 get_settings,
                 save_settings,
                 create_tenant,
+                update_tenant
             ]
         )
         .run(tauri::generate_context!())

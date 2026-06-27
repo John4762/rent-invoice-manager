@@ -2,6 +2,7 @@ use crate::database::connection::get_connection;
 use crate::models::tenant::Tenant;
 use crate::repositories::tenant_repository::TenantRepository;
 use crate::models::create_tenant_request::CreateTenantRequest;
+use crate::models::update_tenant_request::UpdateTenantRequest;
 
 #[tauri::command]
 pub fn get_tenant_count() -> i32 {
@@ -24,6 +25,18 @@ pub fn create_tenant(
     let conn = get_connection();
 
     TenantRepository::create(
+        &conn,
+        tenant,
+    );
+}
+
+#[tauri::command]
+pub fn update_tenant(
+    tenant: UpdateTenantRequest,
+) {
+    let conn = get_connection();
+
+    TenantRepository::update(
         &conn,
         tenant,
     );

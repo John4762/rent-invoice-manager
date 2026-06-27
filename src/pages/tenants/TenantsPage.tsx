@@ -145,6 +145,77 @@ export function TenantsPage() {
     });
   }
 
+  async function toggleTenantStatus() {
+  if (!selectedTenant) return;
+
+  try {
+    await invoke("update_tenant", {
+      tenant: {
+        id: selectedTenant.id,
+
+        tenant_name: selectedTenant.tenantName,
+        tenant_code: selectedTenant.tenantCode,
+        tenant_gstin: selectedTenant.tenantGstin,
+
+        tenant_address: selectedTenant.tenantAddress,
+        location_address:
+          selectedTenant.locationAddress,
+
+        rent_amount:
+          selectedTenant.rentAmount,
+
+        cgst_percent:
+          selectedTenant.cgstPercent,
+
+        sgst_percent:
+          selectedTenant.sgstPercent,
+
+        active:
+          !selectedTenant.active,
+      },
+    });
+
+    await loadTenants();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+  async function saveTenant() {
+    if (!selectedTenant) return;
+
+    try {
+      await invoke("update_tenant", {
+        tenant: {
+          id: selectedTenant.id,
+
+          tenant_name: selectedTenant.tenantName,
+          tenant_code: selectedTenant.tenantCode,
+          tenant_gstin: selectedTenant.tenantGstin,
+
+          tenant_address: selectedTenant.tenantAddress,
+          location_address: selectedTenant.locationAddress,
+
+          rent_amount: selectedTenant.rentAmount,
+
+          cgst_percent: selectedTenant.cgstPercent,
+          sgst_percent: selectedTenant.sgstPercent,
+
+          active: selectedTenant.active,
+        },
+      });
+
+      await loadTenants();
+
+      setIsEditing(false);
+
+      console.log("TENANT UPDATED");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to update tenant");
+    }
+  }
+
   return (
     <AppContainer>
       <PageHeader
@@ -226,7 +297,7 @@ export function TenantsPage() {
       text-white
       hover:bg-emerald-600
     "
-                    onClick={() => setIsEditing(false)}
+                    onClick={saveTenant}
                   >
                     Save Changes
                   </Button>
@@ -242,9 +313,7 @@ export function TenantsPage() {
       hover:text-white
       hover:border-amber-500/50
     "
-                    onClick={() => {
-                      updateTenant("active", !selectedTenant.active);
-                    }}
+                    onClick={toggleTenantStatus}
                   >
                     {selectedTenant.active ? "Deactivate" : "Activate"}
                   </Button>
