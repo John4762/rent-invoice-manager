@@ -16,6 +16,7 @@ use commands::settings_commands::get_settings;
 use commands::settings_commands::save_settings;
 use commands::tenant_commands::create_tenant;
 use commands::tenant_commands::update_tenant;
+use commands::tenant_commands::delete_tenant;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -46,6 +47,7 @@ pub fn run() {
                 get_settings,
                 save_settings,
                 create_tenant,
+                delete_tenant,
                 update_tenant
             ]
         )

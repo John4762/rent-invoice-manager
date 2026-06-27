@@ -110,6 +110,23 @@ impl TenantRepository {
     .unwrap();
 }
 
+pub fn delete(
+    conn: &Connection,
+    tenant_id: String,
+) {
+    conn.execute(
+        "
+        UPDATE tenants
+        SET
+            deleted = 1,
+            active = 0
+        WHERE id = ?
+        ",
+        params![tenant_id],
+    )
+    .unwrap();
+}
+
     pub fn get_all(
         conn: &Connection,
     ) -> Vec<Tenant> {
@@ -130,6 +147,7 @@ impl TenantRepository {
                     created_at,
                     updated_at
                 FROM tenants
+                WHERE deleted = 0
                 ORDER BY tenant_name
                 ",
             )

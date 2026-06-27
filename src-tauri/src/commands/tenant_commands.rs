@@ -41,3 +41,15 @@ pub fn update_tenant(
         tenant,
     );
 }
+
+#[tauri::command]
+pub fn delete_tenant(
+    tenant_id: String,
+) {
+    let conn = get_connection();
+
+    TenantRepository::delete(
+        &conn,
+        tenant_id,
+    );
+}
