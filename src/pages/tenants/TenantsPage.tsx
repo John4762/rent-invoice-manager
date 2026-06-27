@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 
+import { AddTenantDialog } from "./AddTenantDialog";
 import { AppContainer } from "@/components/common/AppContainer";
 import { PageHeader } from "@/components/common/PageHeader";
 
@@ -51,13 +52,12 @@ interface TenantDb {
   updated_at: string;
 }
 
-
 export function TenantsPage() {
-const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
 
-const [selectedTenantId, setSelectedTenantId] =
-  useState("");
+  const [selectedTenantId, setSelectedTenantId] = useState("");
 
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const selectedTenant = useMemo(
@@ -65,9 +65,10 @@ const [selectedTenantId, setSelectedTenantId] =
     [tenants, selectedTenantId],
   );
 
-useEffect(() => {
-  invoke<TenantDb[]>("get_tenants")
-    .then((result) => {
+  async function loadTenants() {
+    try {
+      const result = await invoke<TenantDb[]>("get_tenants");
+
       const mappedTenants: Tenant[] = result.map((tenant) => ({
         id: tenant.id,
 
@@ -86,42 +87,48 @@ useEffect(() => {
         active: tenant.active,
       }));
 
+      const previousCount = tenants.length;
+
       setTenants(mappedTenants);
 
-      if (mappedTenants.length > 0) {
+      if (mappedTenants.length > previousCount) {
+        setSelectedTenantId(mappedTenants[mappedTenants.length - 1].id);
+      }
+
+      if (mappedTenants.length > 0 && !selectedTenantId) {
         setSelectedTenantId(mappedTenants[0].id);
       }
-    })
-    .catch(console.error);
-}, []);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-if (tenants.length === 0) {
-  return (
-    <AppContainer>
-      <PageHeader
-        title="Tenants"
-        description="Manage tenant information and contact details."
-      />
+  useEffect(() => {
+    loadTenants();
+  }, []);
 
-      <Card className="border-zinc-700 bg-zinc-800/50">
-        <CardContent className="py-12 text-center">
-          <p className="text-zinc-400">
-            No tenants found.
-          </p>
+  if (tenants.length === 0) {
+    return (
+      <AppContainer>
+        <PageHeader
+          title="Tenants"
+          description="Manage tenant information and contact details."
+        />
 
-          <Button className="mt-4">
-            Add First Tenant
-          </Button>
-        </CardContent>
-      </Card>
-    </AppContainer>
-  );
-}
+        <Card className="border-zinc-700 bg-zinc-800/50">
+          <CardContent className="py-12 text-center">
+            <p className="text-zinc-400">No tenants found.</p>
 
-if (!selectedTenant) {
-  return null;
-}
+            <Button className="mt-4">Add First Tenant</Button>
+          </CardContent>
+        </Card>
+      </AppContainer>
+    );
+  }
 
+  if (!selectedTenant) {
+    return null;
+  }
 
   function updateTenant(field: keyof Tenant, value: string | number | boolean) {
     setTenants((current) => {
@@ -174,7 +181,11 @@ if (!selectedTenant) {
             </button>
           ))}
 
-          <Button variant="outline" className="w-36 shrink-0">
+          <Button
+            variant="outline"
+            className="w-36 shrink-0"
+            onClick={() => setAddDialogOpen(true)}
+          >
             + Add Tenant
           </Button>
         </div>
@@ -432,6 +443,13 @@ if (!selectedTenant) {
           </CardContent>
         </Card>
       </div>
+      <AddTenantDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSuccess={async () => {
+          await loadTenants();
+        }}
+      />
     </AppContainer>
   );
 }
