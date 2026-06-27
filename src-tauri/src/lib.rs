@@ -11,7 +11,11 @@ use commands::archive_commands::seed_archive_data;
 use commands::email_commands::send_invoice_email;
 use commands::settings_commands::get_settings;
 use commands::settings_commands::save_settings;
+use commands::tenant_commands::create_tenant;
+use commands::tenant_commands::delete_tenant;
 use commands::tenant_commands::get_tenant_count;
+use commands::tenant_commands::get_tenants;
+use commands::tenant_commands::update_tenant;
 use database::connection::get_connection;
 use database::migrations::run_migrations;
 
@@ -35,6 +39,10 @@ pub fn run() {
             tauri::generate_handler![
                 greet,
                 get_tenant_count,
+                get_tenants,
+                create_tenant,
+                update_tenant,
+                delete_tenant,
                 get_available_months,
                 get_invoices_for_month,
                 get_invoice_details,
