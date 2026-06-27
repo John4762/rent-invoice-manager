@@ -8,16 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Tenant {
   id: string;
@@ -122,12 +112,10 @@ export function EditTenantDialog({
           <DialogTitle>Edit Tenant</DialogTitle>
         </DialogHeader>
 
-        <div>
-          TEMP UI
-        </div>
+        <div>TEMP UI</div>
 
-        <Button onClick={handleSave}>
-          Save Changes
+        <Button onClick={handleSave} disabled={loading}>
+          {loading ? "Saving..." : "Save Changes"}
         </Button>
       </DialogContent>
     </Dialog>

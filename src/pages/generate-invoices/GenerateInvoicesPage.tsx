@@ -1,12 +1,14 @@
+import { invoke } from "@tauri-apps/api/core";
 import { PDFViewer } from "@react-pdf/renderer";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/common/PageHeader";
-import { landlordInfo, tenantRentalData } from "@/data/sampleInvoiceData";
 import {
   createRentalInvoiceDraft,
   getInvoiceDate,
   getInvoiceMonthLabel,
+  type LandlordInfo,
+  type TenantInfo,
 } from "@/lib/invoiceEngine";
 import {
   getExistingInvoiceRecordsForEngine,
@@ -14,6 +16,49 @@ import {
 } from "@/lib/generatedInvoiceStore";
 import type { GeneratedInvoiceRun } from "@/lib/generatedInvoiceStore";
 import { RentalInvoicePdf } from "@/pdf/RentalInvoicePdf";
+
+type AppSettings = {
+  landlord_name: string;
+  pan: string;
+  gstin: string;
+  address: string;
+  invoice_prefix: string;
+  recipient_email: string;
+  sender_email: string;
+  gmail_app_password: string;
+};
+
+
+type ArchivedInvoiceConflict = {
+  tenantId: string;
+  invoiceNumber: string;
+  tenantName: string;
+  emailStatus: string;
+};
+
+type TenantRecord = {
+  id: string;
+  tenant_name: string;
+  tenant_code: string;
+  tenant_gstin: string;
+  tenant_address: string;
+  location_address: string;
+  rent_amount: number;
+  cgst_percent: number;
+  sgst_percent: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type TenantRentalData = TenantInfo & {
+  sourceTenantId: string;
+  active: boolean;
+  rentAmount: number;
+  sacCode?: string;
+  cgstRate?: number;
+  sgstRate?: number;
+};
 
 function getCurrentCalendarCycleMonth(): string {
   const today = new Date();
@@ -31,18 +76,92 @@ function getCycleMonthLabel(cycleMonth: string): string {
   );
 }
 
+function getCycleMonthParts(cycleMonth: string) {
+  const [yearText, monthText] = cycleMonth.split("-");
+
+  return {
+    cycleYear: Number(yearText),
+    cycleMonthNumber: Number(monthText),
+  };
+}
+
+function splitAddressLines(address: string): string[] {
+  return address
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function getStableNumericTenantId(id: string): number {
+  let hash = 0;
+
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) % 2147483647;
+  }
+
+  return hash || 1;
+}
+
+function mapSettingsToLandlordInfo(settings: AppSettings): LandlordInfo {
+  return {
+    name: settings.landlord_name,
+    pan: settings.pan,
+    gstin: settings.gstin,
+    addressLines: splitAddressLines(settings.address),
+    signatureImageSrc: "/signature.jpg",
+  };
+}
+
+function mapTenantRecordToRentalData(tenant: TenantRecord): TenantRentalData {
+  return {
+    sourceTenantId: tenant.id,
+    tenantId: getStableNumericTenantId(tenant.id),
+    tenantCode: tenant.tenant_code,
+    name: tenant.tenant_name,
+    gstin: tenant.tenant_gstin,
+    billingAddressLines: splitAddressLines(tenant.tenant_address),
+    locationAddressLines: splitAddressLines(tenant.location_address),
+    active: tenant.active,
+    rentAmount: tenant.rent_amount,
+    sacCode: "997212",
+    cgstRate: tenant.cgst_percent,
+    sgstRate: tenant.sgst_percent,
+  };
+}
+
+function hasRequiredLandlordInfo(
+  landlord: LandlordInfo | null,
+): landlord is LandlordInfo {
+  if (!landlord) {
+    return false;
+  }
+
+  return Boolean(
+    landlord.name.trim() &&
+      landlord.pan.trim() &&
+      landlord.gstin.trim() &&
+      landlord.addressLines.length > 0,
+  );
+}
+
+async function loadSettings() {
+  return await invoke<AppSettings | null>("get_settings");
+}
+
+async function loadTenants() {
+  return await invoke<TenantRecord[]>("get_tenants");
+}
+
 export function GenerateInvoicesPage() {
   const navigate = useNavigate();
 
-  const defaultSelectedTenantIds = useMemo(
-    () => tenantRentalData.map((tenant) => tenant.tenantId),
+  const [cycleMonth, setCycleMonth] = useState(getCurrentCalendarCycleMonth());
+  const [landlord, setLandlord] = useState<LandlordInfo | null>(null);
+  const [tenantRentalData, setTenantRentalData] = useState<TenantRentalData[]>(
     [],
   );
-
-  const [cycleMonth, setCycleMonth] = useState(getCurrentCalendarCycleMonth());
-  const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>(
-    defaultSelectedTenantIds,
-  );
+  const [selectedTenantIds, setSelectedTenantIds] = useState<string[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
   const [popupMessage, setPopupMessage] = useState<string | null>(null);
   const [generatedRun, setGeneratedRun] = useState<GeneratedInvoiceRun | null>(
     null,
@@ -50,26 +169,121 @@ export function GenerateInvoicesPage() {
   const [selectedInvoiceIndex, setSelectedInvoiceIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
 
-  const selectedTenants = tenantRentalData.filter((tenant) =>
-    selectedTenantIds.includes(tenant.tenantId),
+  useEffect(() => {
+    let mounted = true;
+
+    async function fetchInvoiceData() {
+      try {
+        setLoadingData(true);
+
+        const [settings, tenants] = await Promise.all([
+          loadSettings(),
+          loadTenants(),
+        ]);
+
+        if (!mounted) {
+          return;
+        }
+
+        if (settings) {
+          setLandlord(mapSettingsToLandlordInfo(settings));
+        }
+
+        const mappedTenants = tenants
+          .filter((tenant) => tenant.active)
+          .map(mapTenantRecordToRentalData);
+
+        setTenantRentalData(mappedTenants);
+        setSelectedTenantIds(
+          mappedTenants.map((tenant) => tenant.sourceTenantId),
+        );
+      } catch (error) {
+        if (mounted) {
+          setPopupMessage(`Could not load invoice data: ${String(error)}`);
+        }
+      } finally {
+        if (mounted) {
+          setLoadingData(false);
+        }
+      }
+    }
+
+    fetchInvoiceData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const selectedTenants = useMemo(
+    () =>
+      tenantRentalData.filter((tenant) =>
+        selectedTenantIds.includes(tenant.sourceTenantId),
+      ),
+    [tenantRentalData, selectedTenantIds],
   );
 
   const invoices = generatedRun?.invoices ?? [];
   const selectedInvoice = invoices[selectedInvoiceIndex];
 
-  function handleTenantToggle(tenantId: number) {
+  function handleTenantToggle(sourceTenantId: string) {
     setSelectedTenantIds((currentTenantIds) => {
-      if (currentTenantIds.includes(tenantId)) {
-        return currentTenantIds.filter((id) => id !== tenantId);
+      if (currentTenantIds.includes(sourceTenantId)) {
+        return currentTenantIds.filter((id) => id !== sourceTenantId);
       }
 
-      return [...currentTenantIds, tenantId];
+      return [...currentTenantIds, sourceTenantId];
     });
   }
 
-  function handleGenerateInvoices() {
+  async function handleGenerateInvoices() {
+    if (loadingData) {
+      setPopupMessage("Tenant and landlord data is still loading.");
+      return;
+    }
+
+    if (!hasRequiredLandlordInfo(landlord)) {
+      setPopupMessage(
+        "Landlord information is incomplete. Please update Settings before generating invoices.",
+      );
+      return;
+    }
+
+    if (tenantRentalData.length === 0) {
+      setPopupMessage(
+        "No active tenants found. Please add active tenants before generating invoices.",
+      );
+      return;
+    }
+
     if (selectedTenants.length === 0) {
       setPopupMessage("Select at least one tenant before generating invoices.");
+      return;
+    }
+
+
+        const { cycleMonthNumber, cycleYear } = getCycleMonthParts(cycleMonth);
+
+    const archiveConflicts = await invoke<ArchivedInvoiceConflict[]>(
+      "get_archived_invoice_conflicts",
+      {
+        tenantIds: selectedTenants.map((tenant) => tenant.sourceTenantId),
+        cycleMonth: cycleMonthNumber,
+        cycleYear,
+      },
+    );
+
+    if (archiveConflicts.length > 0) {
+      const conflictNames = archiveConflicts
+        .map(
+          (conflict) =>
+            `${conflict.tenantName} (${conflict.invoiceNumber})`,
+        )
+        .join(", ");
+
+      setPopupMessage(
+        `Cannot generate. Invoice already exists in Archive for: ${conflictNames}.`,
+      );
       return;
     }
 
@@ -77,7 +291,7 @@ export function GenerateInvoicesPage() {
 
     const invoicesForRun = selectedTenants.map((tenant) =>
       createRentalInvoiceDraft({
-        landlord: landlordInfo,
+        landlord,
         tenant,
         cycleMonth,
         rentAmount: tenant.rentAmount,
@@ -156,40 +370,54 @@ export function GenerateInvoicesPage() {
               </span>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              {tenantRentalData.map((tenant) => {
-                const selected = selectedTenantIds.includes(tenant.tenantId);
+            {loadingData ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-sm text-zinc-400">
+                Loading tenants from database...
+              </div>
+            ) : tenantRentalData.length === 0 ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-sm text-zinc-400">
+                No active tenants found. Add tenants in the Tenants page first.
+              </div>
+            ) : (
+              <div className="grid max-h-72 gap-3 overflow-y-auto pr-2 md:grid-cols-2">
+                {tenantRentalData.map((tenant) => {
+                  const selected = selectedTenantIds.includes(
+                    tenant.sourceTenantId,
+                  );
 
-                return (
-                  <label
-                    key={tenant.tenantId}
-                    className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${
-                      selected
-                        ? "border-zinc-600 bg-zinc-800/80"
-                        : "border-zinc-800 bg-zinc-950/40 hover:bg-zinc-900"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => handleTenantToggle(tenant.tenantId)}
-                      className="h-4 w-4 accent-zinc-100"
-                    />
+                  return (
+                    <label
+                      key={tenant.sourceTenantId}
+                      className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${
+                        selected
+                          ? "border-zinc-600 bg-zinc-800/80"
+                          : "border-zinc-800 bg-zinc-950/40 hover:bg-zinc-900"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() =>
+                          handleTenantToggle(tenant.sourceTenantId)
+                        }
+                        className="h-4 w-4 accent-zinc-100"
+                      />
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-zinc-100">
-                        {tenant.name}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-zinc-100">
+                          {tenant.name}
+                        </p>
 
-                      <p className="mt-1 text-xs text-zinc-500">
-                        {tenant.tenantCode} · ₹
-                        {tenant.rentAmount.toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
+                        <p className="mt-1 text-xs text-zinc-500">
+                          {tenant.tenantCode} · ₹
+                          {tenant.rentAmount.toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -197,7 +425,8 @@ export function GenerateInvoicesPage() {
           <button
             type="button"
             onClick={handleGenerateInvoices}
-            className="rounded-2xl bg-zinc-100 px-10 py-4 text-lg font-semibold text-zinc-950 transition hover:bg-white"
+            disabled={loadingData}
+            className="rounded-2xl bg-zinc-100 px-10 py-4 text-lg font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             Generate Invoice
           </button>
