@@ -17,6 +17,7 @@ impl SettingsRepository {
                     gstin,
                     address,
                     invoice_prefix,
+                    sac_code,
                     recipient_email,
                     sender_email,
                     gmail_app_password
@@ -33,9 +34,10 @@ impl SettingsRepository {
                 gstin: row.get(2)?,
                 address: row.get(3)?,
                 invoice_prefix: row.get(4)?,
-                recipient_email: row.get(5)?,
-                sender_email: row.get(6)?,
-                gmail_app_password: row.get(7)?,
+                sac_code: row.get(5)?,
+                recipient_email: row.get(6)?,
+                sender_email: row.get(7)?,
+                gmail_app_password: row.get(8)?,
             })
         })
         .ok()
@@ -54,6 +56,7 @@ impl SettingsRepository {
                 gstin = ?,
                 address = ?,
                 invoice_prefix = ?,
+                sac_code = ?,
                 recipient_email = ?,
                 sender_email = ?,
                 gmail_app_password = ?
@@ -65,6 +68,7 @@ impl SettingsRepository {
                 settings.gstin,
                 settings.address,
                 settings.invoice_prefix,
+                settings.sac_code,
                 settings.recipient_email,
                 settings.sender_email,
                 settings.gmail_app_password
