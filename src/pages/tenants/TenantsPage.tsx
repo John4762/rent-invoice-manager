@@ -146,40 +146,35 @@ export function TenantsPage() {
   }
 
   async function toggleTenantStatus() {
-  if (!selectedTenant) return;
+    if (!selectedTenant) return;
 
-  try {
-    await invoke("update_tenant", {
-      tenant: {
-        id: selectedTenant.id,
+    try {
+      await invoke("update_tenant", {
+        tenant: {
+          id: selectedTenant.id,
 
-        tenant_name: selectedTenant.tenantName,
-        tenant_code: selectedTenant.tenantCode,
-        tenant_gstin: selectedTenant.tenantGstin,
+          tenant_name: selectedTenant.tenantName,
+          tenant_code: selectedTenant.tenantCode,
+          tenant_gstin: selectedTenant.tenantGstin,
 
-        tenant_address: selectedTenant.tenantAddress,
-        location_address:
-          selectedTenant.locationAddress,
+          tenant_address: selectedTenant.tenantAddress,
+          location_address: selectedTenant.locationAddress,
 
-        rent_amount:
-          selectedTenant.rentAmount,
+          rent_amount: selectedTenant.rentAmount,
 
-        cgst_percent:
-          selectedTenant.cgstPercent,
+          cgst_percent: selectedTenant.cgstPercent,
 
-        sgst_percent:
-          selectedTenant.sgstPercent,
+          sgst_percent: selectedTenant.sgstPercent,
 
-        active:
-          !selectedTenant.active,
-      },
-    });
+          active: !selectedTenant.active,
+        },
+      });
 
-    await loadTenants();
-  } catch (error) {
-    console.error(error);
+      await loadTenants();
+    } catch (error) {
+      console.error(error);
+    }
   }
-}
 
   async function saveTenant() {
     if (!selectedTenant) return;
@@ -213,6 +208,45 @@ export function TenantsPage() {
     } catch (error) {
       console.error(error);
       alert("Failed to update tenant");
+    }
+  }
+
+async function deleteTenant() {
+  console.log("DELETE CLICKED");
+  console.log("SELECTED TENANT", selectedTenant);
+
+  if (!selectedTenant) {
+    console.log("NO TENANT SELECTED");
+    return;
+  }
+
+const confirmed = true;
+
+  console.log("CONFIRMED", confirmed);
+
+  if (!confirmed) return;
+
+    try {
+      await invoke("delete_tenant", {
+        tenantId: selectedTenant.id,
+      });
+
+      await loadTenants();
+
+      if (tenants.length > 1) {
+        const remainingTenant = tenants.find(
+          (tenant) => tenant.id !== selectedTenant.id,
+        );
+
+        if (remainingTenant) {
+          setSelectedTenantId(remainingTenant.id);
+        }
+      }
+
+      console.log("TENANT DELETED");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to delete tenant");
     }
   }
 
@@ -321,14 +355,15 @@ export function TenantsPage() {
                   <Button
                     variant="outline"
                     className="
-      w-36
-      border-red-500/30
-      bg-red-500/10
-      text-red-400
-      hover:bg-red-500/20
-      hover:text-white
-      hover:border-red-500/50
-    "
+    w-36
+    border-red-500/30
+    bg-red-500/10
+    text-red-400
+    hover:bg-red-500/20
+    hover:text-white
+    hover:border-red-500/50
+  "
+                    onClick={deleteTenant}
                   >
                     Delete
                   </Button>
