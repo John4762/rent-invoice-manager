@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { useEffect } from "react";
 
 import { AppContainer } from "@/components/common/AppContainer";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -28,64 +30,33 @@ interface Tenant {
   active: boolean;
 }
 
-const mockTenants: Tenant[] = [
-  {
-    id: "1",
-    tenantName: "CP Traders",
-    tenantCode: "CP",
-    tenantGstin: "32ABCDE1234F1Z5",
+interface TenantDb {
+  id: string;
 
-    tenantAddress: "CP Traders, MG Road, Kochi, Kerala",
+  tenant_name: string;
+  tenant_code: string;
+  tenant_gstin: string;
 
-    locationAddress: "Warehouse Complex, Kakkanad, Kochi",
+  tenant_address: string;
+  location_address: string;
 
-    rentAmount: 25000,
+  rent_amount: number;
 
-    cgstPercent: 9,
-    sgstPercent: 9,
+  cgst_percent: number;
+  sgst_percent: number;
 
-    active: true,
-  },
-  {
-    id: "2",
-    tenantName: "XYZ Logistics",
-    tenantCode: "XYZ",
-    tenantGstin: "32ABCDE5678F1Z5",
+  active: boolean;
 
-    tenantAddress: "XYZ Logistics, Ernakulam, Kerala",
+  created_at: string;
+  updated_at: string;
+}
 
-    locationAddress: "Container Yard, Kalamassery",
-
-    rentAmount: 40000,
-
-    cgstPercent: 9,
-    sgstPercent: 9,
-
-    active: true,
-  },
-  {
-    id: "3",
-    tenantName: "ABC Exports",
-    tenantCode: "ABC",
-    tenantGstin: "32ABCDE9999F1Z5",
-
-    tenantAddress: "ABC Exports, Thrissur, Kerala",
-
-    locationAddress: "Export Warehouse, Angamaly",
-
-    rentAmount: 30000,
-
-    cgstPercent: 9,
-    sgstPercent: 9,
-
-    active: false,
-  },
-];
 
 export function TenantsPage() {
-  const [tenants, setTenants] = useState(mockTenants);
+const [tenants, setTenants] = useState<Tenant[]>([]);
 
-  const [selectedTenantId, setSelectedTenantId] = useState(mockTenants[0].id);
+const [selectedTenantId, setSelectedTenantId] =
+  useState("");
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -93,9 +64,64 @@ export function TenantsPage() {
     () => tenants.find((tenant) => tenant.id === selectedTenantId),
     [tenants, selectedTenantId],
   );
-  if (!selectedTenant) {
-    return null;
-  }
+
+useEffect(() => {
+  invoke<TenantDb[]>("get_tenants")
+    .then((result) => {
+      const mappedTenants: Tenant[] = result.map((tenant) => ({
+        id: tenant.id,
+
+        tenantName: tenant.tenant_name,
+        tenantCode: tenant.tenant_code,
+        tenantGstin: tenant.tenant_gstin,
+
+        tenantAddress: tenant.tenant_address,
+        locationAddress: tenant.location_address,
+
+        rentAmount: tenant.rent_amount,
+
+        cgstPercent: tenant.cgst_percent,
+        sgstPercent: tenant.sgst_percent,
+
+        active: tenant.active,
+      }));
+
+      setTenants(mappedTenants);
+
+      if (mappedTenants.length > 0) {
+        setSelectedTenantId(mappedTenants[0].id);
+      }
+    })
+    .catch(console.error);
+}, []);
+
+if (tenants.length === 0) {
+  return (
+    <AppContainer>
+      <PageHeader
+        title="Tenants"
+        description="Manage tenant information and contact details."
+      />
+
+      <Card className="border-zinc-700 bg-zinc-800/50">
+        <CardContent className="py-12 text-center">
+          <p className="text-zinc-400">
+            No tenants found.
+          </p>
+
+          <Button className="mt-4">
+            Add First Tenant
+          </Button>
+        </CardContent>
+      </Card>
+    </AppContainer>
+  );
+}
+
+if (!selectedTenant) {
+  return null;
+}
+
 
   function updateTenant(field: keyof Tenant, value: string | number | boolean) {
     setTenants((current) => {
@@ -139,7 +165,7 @@ export function TenantsPage() {
                 transition-all
                 ${
                   selectedTenantId === tenant.id
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                    ? "border-zinc-500 bg-zinc-700 text-white"
                     : "border-zinc-700 bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700/60"
                 }
               `}
