@@ -28,6 +28,14 @@ type AppSettings = {
   gmail_app_password: string;
 };
 
+
+type ArchivedInvoiceConflict = {
+  tenantId: string;
+  invoiceNumber: string;
+  tenantName: string;
+  emailStatus: string;
+};
+
 type TenantRecord = {
   id: string;
   tenant_name: string;
@@ -66,6 +74,15 @@ function getCycleMonthLabel(cycleMonth: string): string {
   return getInvoiceMonthLabel(
     getInvoiceDate(Number(yearText), Number(monthText)),
   );
+}
+
+function getCycleMonthParts(cycleMonth: string) {
+  const [yearText, monthText] = cycleMonth.split("-");
+
+  return {
+    cycleYear: Number(yearText),
+    cycleMonthNumber: Number(monthText),
+  };
 }
 
 function splitAddressLines(address: string): string[] {
@@ -219,7 +236,7 @@ export function GenerateInvoicesPage() {
     });
   }
 
-  function handleGenerateInvoices() {
+  async function handleGenerateInvoices() {
     if (loadingData) {
       setPopupMessage("Tenant and landlord data is still loading.");
       return;
@@ -241,6 +258,32 @@ export function GenerateInvoicesPage() {
 
     if (selectedTenants.length === 0) {
       setPopupMessage("Select at least one tenant before generating invoices.");
+      return;
+    }
+
+
+        const { cycleMonthNumber, cycleYear } = getCycleMonthParts(cycleMonth);
+
+    const archiveConflicts = await invoke<ArchivedInvoiceConflict[]>(
+      "get_archived_invoice_conflicts",
+      {
+        tenantIds: selectedTenants.map((tenant) => tenant.sourceTenantId),
+        cycleMonth: cycleMonthNumber,
+        cycleYear,
+      },
+    );
+
+    if (archiveConflicts.length > 0) {
+      const conflictNames = archiveConflicts
+        .map(
+          (conflict) =>
+            `${conflict.tenantName} (${conflict.invoiceNumber})`,
+        )
+        .join(", ");
+
+      setPopupMessage(
+        `Cannot generate. Invoice already exists in Archive for: ${conflictNames}.`,
+      );
       return;
     }
 

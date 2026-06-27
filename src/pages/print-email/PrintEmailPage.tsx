@@ -74,6 +74,31 @@ async function loadTenants() {
   return await invoke<TenantRecord[]>("get_tenants");
 }
 
+function getCycleMonthParts(cycleMonth: string) {
+  const [yearText, monthText] = cycleMonth.split("-");
+
+  return {
+    cycleYear: Number(yearText),
+    cycleMonthNumber: Number(monthText),
+  };
+}
+
+function getInvoiceTenantId(invoice: RentalInvoiceDraft): string {
+  const tenantWithSourceId = invoice.tenant as RentalInvoiceDraft["tenant"] & {
+    sourceTenantId?: string;
+  };
+
+  return (
+    tenantWithSourceId.sourceTenantId ??
+    `tenant_${invoice.tenant.tenantCode.toLowerCase()}`
+  );
+}
+
+function joinAddressLines(lines: string[]): string {
+  return lines.join("\n");
+}
+
+
 function normaliseTenantCode(code: string): string {
   return code.trim().toUpperCase();
 }
@@ -425,6 +450,36 @@ export function PrintEmailPage() {
           subject: "Rental invoices",
           body: "Please find attached the generated rental invoices.",
           attachments,
+        },
+      });
+
+      const { cycleMonthNumber, cycleYear } = getCycleMonthParts(
+        generatedRun?.cycleMonth ?? "",
+      );
+
+      await invoke("archive_sent_invoices", {
+        payload: {
+          cycleMonth: cycleMonthNumber,
+          cycleYear,
+          generatedAt: new Date().toISOString(),
+          invoices: targetInvoices.map((invoice) => ({
+            tenantId: getInvoiceTenantId(invoice),
+            invoiceNumber: invoice.invoiceNumber,
+            tenantName: invoice.tenant.name,
+            tenantAddress: joinAddressLines(invoice.tenant.billingAddressLines),
+            locationAddress: joinAddressLines(
+              invoice.tenant.locationAddressLines,
+            ),
+            invoiceDate: invoice.invoiceDate,
+            financialYear: invoice.financialYear,
+            rentAmount: invoice.rentAmount,
+            cgstPercent: invoice.cgstRate,
+            cgstAmount: invoice.cgstAmount,
+            sgstPercent: invoice.sgstRate,
+            sgstAmount: invoice.sgstAmount,
+            grandTotal: invoice.grandTotalRounded,
+            pdfPath: getInvoiceFileName(invoice),
+          })),
         },
       });
 

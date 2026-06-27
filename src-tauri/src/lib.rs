@@ -18,6 +18,8 @@ use commands::tenant_commands::get_tenants;
 use commands::tenant_commands::update_tenant;
 use database::connection::get_connection;
 use database::migrations::run_migrations;
+use commands::archive_commands::archive_sent_invoices;
+use commands::archive_commands::get_archived_invoice_conflicts;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -37,6 +39,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(
             tauri::generate_handler![
+                
                 greet,
                 get_tenant_count,
                 get_tenants,
@@ -48,6 +51,8 @@ pub fn run() {
                 get_invoice_details,
                 open_pdf,
                 seed_archive_data,
+                get_archived_invoice_conflicts,
+                archive_sent_invoices,
                 send_invoice_email,
                 get_settings,
                 save_settings
