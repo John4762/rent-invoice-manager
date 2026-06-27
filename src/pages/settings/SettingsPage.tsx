@@ -24,6 +24,7 @@ async function saveSettings(settings: any) {
 
 export function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
+  const [sacCode, setSacCode] = useState("");
 
   const [landlordName, setLandlordName] = useState("A J Properties");
 
@@ -54,9 +55,10 @@ export function SettingsPage() {
       setGstin(s.gstin);
       setAddress(s.address);
 
-      setInvoicePrefix(s.invoice_prefix);
+setInvoicePrefix(s.invoice_prefix);
+setSacCode(s.sac_code ?? "");
 
-      setRecipientEmail(s.recipient_email);
+setRecipientEmail(s.recipient_email);
       setSenderEmail(s.sender_email);
 
       setGmailAppPassword(s.gmail_app_password);
@@ -67,10 +69,73 @@ export function SettingsPage() {
 
   return (
     <AppContainer>
-      <PageHeader
-        title="Settings"
-        description="Manage landlord, invoice and email configuration."
-      />
+<div className="mb-6 flex items-start justify-between">
+  <PageHeader
+    title="Settings"
+    description="Manage landlord, invoice and email configuration."
+  />
+
+  <Button
+    size="lg"
+    onClick={async () => {
+      if (isEditing) {
+        if (!landlordName.trim()) {
+          toast.error("Landlord Name is required");
+          return;
+        }
+
+        if (!pan.trim()) {
+          toast.error("PAN is required");
+          return;
+        }
+
+        if (!gstin.trim()) {
+          toast.error("GSTIN is required");
+          return;
+        }
+
+        if (!address.trim()) {
+          toast.error("Address is required");
+          return;
+        }
+
+        if (!invoicePrefix.trim()) {
+          toast.error("Invoice Prefix is required");
+          return;
+        }
+
+        if (!sacCode.trim()) {
+          toast.error("SAC Code is required");
+          return;
+        }
+
+        await saveSettings({
+          landlord_name: landlordName,
+          pan,
+          gstin,
+          address,
+          invoice_prefix: invoicePrefix,
+          sac_code: sacCode,
+          recipient_email: recipientEmail,
+          sender_email: senderEmail,
+          gmail_app_password: gmailAppPassword,
+        });
+
+        toast.success("Settings saved successfully");
+      }
+
+      setIsEditing(!isEditing);
+    }}
+    className={
+      isEditing
+        ? "bg-white text-black hover:bg-zinc-200"
+        : "bg-emerald-600 text-white hover:bg-emerald-500"
+    }
+  >
+    <Pencil className="mr-2 h-4 w-4" />
+    {isEditing ? "Save Changes" : "Edit Settings"}
+  </Button>
+</div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <div className="space-y-6">
@@ -146,7 +211,7 @@ export function SettingsPage() {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              <div className="max-w-xs space-y-2">
+              <div className="space-y-2">
                 <Label className="text-zinc-300">Invoice Prefix</Label>
 
                 <Input
@@ -228,81 +293,37 @@ export function SettingsPage() {
           </Card>
 
           <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
-            <CardContent className="flex items-center justify-between p-6">
-              <div>
-                <div className="font-medium text-white">
-                  {isEditing ? "Editing Settings" : "Settings Locked"}
-                </div>
+  <CardHeader>
+    <CardTitle className="text-xl text-white">
+      Additional Settings
+    </CardTitle>
 
-                <div className="text-sm text-zinc-400">
-                  {isEditing
-                    ? "Make your changes and save them."
-                    : "Click Edit Settings to modify application settings."}
-                </div>
-              </div>
+    <p className="text-sm text-zinc-400">
+      Additional invoice configuration.
+    </p>
+  </CardHeader>
 
-              <Button
-                size="lg"
-                onClick={async () => {
-                  if (isEditing) {
-                    if (!landlordName.trim()) {
-                      toast.error("Landlord Name is required");
-                      return;
-                    }
+  <CardContent>
+    <div className="space-y-2">
+      <Label className="text-zinc-300">
+        SAC Code
+      </Label>
 
-                    if (!pan.trim()) {
-                      toast.error("PAN is required");
-                      return;
-                    }
+      <Input
+        className="h-11 text-white disabled:opacity-70"
+        readOnly={!isEditing}
+        value={sacCode}
+        onChange={(e) => setSacCode(e.target.value)}
+        placeholder="997212"
+      />
 
-                    if (!gstin.trim()) {
-                      toast.error("GSTIN is required");
-                      return;
-                    }
+      <p className="text-xs text-zinc-500">
+        Service Accounting Code printed on invoices.
+      </p>
+    </div>
+  </CardContent>
+</Card>
 
-                    if (!address.trim()) {
-                      toast.error("Address is required");
-                      return;
-                    }
-
-                    if (!invoicePrefix.trim()) {
-                      toast.error("Invoice Prefix is required");
-                      return;
-                    }
-
-                    await saveSettings({
-                      landlord_name: landlordName,
-
-                      pan,
-                      gstin,
-                      address,
-
-                      invoice_prefix: invoicePrefix,
-
-                      recipient_email: recipientEmail,
-
-                      sender_email: senderEmail,
-
-                      gmail_app_password: gmailAppPassword,
-                    });
-
-                    toast.success("Settings saved successfully");
-                  }
-
-                  setIsEditing(!isEditing);
-                }}
-                className={
-                  isEditing
-                    ? "bg-white text-black hover:bg-zinc-200"
-                    : "bg-emerald-600 text-white hover:bg-emerald-500"
-                }
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-
-                {isEditing ? "Save Changes" : "Edit Settings"}
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </AppContainer>
