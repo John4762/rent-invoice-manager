@@ -1,81 +1,331 @@
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
+import { Pencil } from "lucide-react";
 import { AppContainer } from "@/components/common/AppContainer";
 import { PageHeader } from "@/components/common/PageHeader";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
+async function loadSettings() {
+  return await invoke("get_settings");
+}
 
-async function testArchive() {
-  try {
-    await invoke("seed_archive_data");
-
-    const invoice = await invoke(
-      "get_invoice_details",
-      {
-        invoiceNumber: "AJ/CP/3/26-27",
-      }
-    );
-
-    console.log(invoice);
-
-    alert(JSON.stringify(invoice, null, 2));
-  } catch (error) {
-    console.error(error);
-
-    alert(`ERROR: ${String(error)}`);
-  }
+async function saveSettings(settings: any) {
+  await invoke("save_settings", {
+    settings,
+  });
 }
 
 export function SettingsPage() {
+  const [isEditing, setIsEditing] = useState(false);
+  const [sacCode, setSacCode] = useState("");
+
+  const [landlordName, setLandlordName] = useState("A J Properties");
+
+  const [pan, setPan] = useState("");
+  const [gstin, setGstin] = useState("");
+  const [address, setAddress] = useState("");
+
+  const [invoicePrefix, setInvoicePrefix] = useState("AJ");
+
+  const [recipientEmail, setRecipientEmail] = useState("");
+
+  const [senderEmail, setSenderEmail] = useState("");
+
+  const [gmailAppPassword, setGmailAppPassword] = useState("");
+
+  useEffect(() => {
+    async function fetchSettings() {
+      const settings = await loadSettings();
+
+      if (!settings) {
+        return;
+      }
+
+      const s = settings as any;
+
+      setLandlordName(s.landlord_name);
+      setPan(s.pan);
+      setGstin(s.gstin);
+      setAddress(s.address);
+
+setInvoicePrefix(s.invoice_prefix);
+setSacCode(s.sac_code ?? "");
+
+setRecipientEmail(s.recipient_email);
+      setSenderEmail(s.sender_email);
+
+      setGmailAppPassword(s.gmail_app_password);
+    }
+
+    fetchSettings();
+  }, []);
+
   return (
     <AppContainer>
-      <PageHeader
-        title="Settings"
-        description="Manage your application settings."
+<div className="mb-6 flex items-start justify-between">
+  <PageHeader
+    title="Settings"
+    description="Manage landlord, invoice and email configuration."
+  />
+
+  <Button
+    size="lg"
+    onClick={async () => {
+      if (isEditing) {
+        if (!landlordName.trim()) {
+          toast.error("Landlord Name is required");
+          return;
+        }
+
+        if (!pan.trim()) {
+          toast.error("PAN is required");
+          return;
+        }
+
+        if (!gstin.trim()) {
+          toast.error("GSTIN is required");
+          return;
+        }
+
+        if (!address.trim()) {
+          toast.error("Address is required");
+          return;
+        }
+
+        if (!invoicePrefix.trim()) {
+          toast.error("Invoice Prefix is required");
+          return;
+        }
+
+        if (!sacCode.trim()) {
+          toast.error("SAC Code is required");
+          return;
+        }
+
+        await saveSettings({
+          landlord_name: landlordName,
+          pan,
+          gstin,
+          address,
+          invoice_prefix: invoicePrefix,
+          sac_code: sacCode,
+          recipient_email: recipientEmail,
+          sender_email: senderEmail,
+          gmail_app_password: gmailAppPassword,
+        });
+
+        toast.success("Settings saved successfully");
+      }
+
+      setIsEditing(!isEditing);
+    }}
+    className={
+      isEditing
+        ? "bg-white text-black hover:bg-zinc-200"
+        : "bg-emerald-600 text-white hover:bg-emerald-500"
+    }
+  >
+    <Pencil className="mr-2 h-4 w-4" />
+    {isEditing ? "Save Changes" : "Edit Settings"}
+  </Button>
+</div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <div className="space-y-6">
+          <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-white">
+                Landlord Information
+              </CardTitle>
+
+              <p className="text-sm text-zinc-400">
+                Information displayed on generated invoices.
+              </p>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Landlord Name</Label>
+
+                <Input
+                  className="h-11 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  value={landlordName}
+                  onChange={(e) => setLandlordName(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">PAN</Label>
+
+                  <Input
+                    className="h-11 text-white disabled:opacity-70"
+                    readOnly={!isEditing}
+                    value={pan}
+                    onChange={(e) => setPan(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-zinc-300">GSTIN</Label>
+
+                  <Input
+                    className="h-11 text-white disabled:opacity-70"
+                    readOnly={!isEditing}
+                    value={gstin}
+                    onChange={(e) => setGstin(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Address</Label>
+
+                <Textarea
+                  className="min-h-28 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-white">
+                Invoice Configuration
+              </CardTitle>
+
+              <p className="text-sm text-zinc-400">
+                Configure invoice numbering defaults.
+              </p>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Invoice Prefix</Label>
+
+                <Input
+                  className="h-11 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  value={invoicePrefix}
+                  onChange={(e) => setInvoicePrefix(e.target.value)}
+                />
+
+                <p className="text-xs text-zinc-500">Example: AJ/CP/3/26-27</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-white">
+                Email Configuration
+              </CardTitle>
+
+              <p className="text-sm text-zinc-400">
+                Configure email delivery settings.
+              </p>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Recipient Email</Label>
+
+                <Input
+                  className="h-11 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="praji@example.com"
+                />
+
+                <p className="text-xs text-zinc-500">
+                  All generated invoices will be sent to this email address.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Sender Email</Label>
+
+                <Input
+                  className="h-11 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  type="email"
+                  value={senderEmail}
+                  onChange={(e) => setSenderEmail(e.target.value)}
+                  placeholder="yourgmail@gmail.com"
+                />
+
+                <p className="text-xs text-zinc-500">
+                  Gmail account used to send invoices.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-zinc-300">Gmail App Password</Label>
+
+                <Input
+                  className="h-11 text-white disabled:opacity-70"
+                  readOnly={!isEditing}
+                  type="password"
+                  value={gmailAppPassword}
+                  onChange={(e) => setGmailAppPassword(e.target.value)}
+                />
+
+                <p className="text-xs text-zinc-500">
+                  Generated from your Google Account security settings.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
+  <CardHeader>
+    <CardTitle className="text-xl text-white">
+      Additional Settings
+    </CardTitle>
+
+    <p className="text-sm text-zinc-400">
+      Additional invoice configuration.
+    </p>
+  </CardHeader>
+
+  <CardContent>
+    <div className="space-y-2">
+      <Label className="text-zinc-300">
+        SAC Code
+      </Label>
+
+      <Input
+        className="h-11 text-white disabled:opacity-70"
+        readOnly={!isEditing}
+        value={sacCode}
+        onChange={(e) => setSacCode(e.target.value)}
+        placeholder="997212"
       />
 
-      <Card
-        className="
-          border-zinc-700
-          bg-zinc-800/50
-          backdrop-blur-sm
-          shadow-lg
-        "
-      >
-        <CardHeader>
-          <CardTitle>Application Settings</CardTitle>
+      <p className="text-xs text-zinc-500">
+        Service Accounting Code printed on invoices.
+      </p>
+    </div>
+  </CardContent>
+</Card>
 
-          <CardDescription>
-            Configure landlord details, email settings and invoice preferences.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-400">
-            Settings form will be implemented here.
-          </p>
-
-          <button
-            onClick={testArchive}
-            className="
-    rounded-lg
-    bg-red-500
-    px-4
-    py-2
-    text-white
-  "
-          >
-            TEST
-          </button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </AppContainer>
   );
 }

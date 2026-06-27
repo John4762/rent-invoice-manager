@@ -18,6 +18,7 @@ pub fn run_migrations(conn: &Connection) {
             sgst_percent REAL NOT NULL,
 
             active INTEGER NOT NULL,
+            deleted INTEGER NOT NULL DEFAULT 0,
 
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -30,6 +31,44 @@ CREATE TABLE IF NOT EXISTS invoice_runs (
     cycle_year INTEGER NOT NULL,
 
     generated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+
+    landlord_name TEXT NOT NULL,
+    pan TEXT NOT NULL,
+    gstin TEXT NOT NULL,
+    address TEXT NOT NULL,
+
+    invoice_prefix TEXT NOT NULL,
+
+    recipient_email TEXT NOT NULL,
+    sender_email TEXT NOT NULL,
+    gmail_app_password TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO settings (
+    id,
+    landlord_name,
+    pan,
+    gstin,
+    address,
+    invoice_prefix,
+    recipient_email,
+    sender_email,
+    gmail_app_password
+)
+VALUES (
+    1,
+    '',
+    '',
+    '',
+    '',
+    'AJ',
+    '',
+    '',
+    ''
 );
 
 CREATE TABLE IF NOT EXISTS archived_invoices (
@@ -72,4 +111,13 @@ CREATE TABLE IF NOT EXISTS archived_invoices (
         ",
     )
     .unwrap();
+
+    conn.execute(
+    "
+    ALTER TABLE tenants
+    ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0
+    ",
+    [],
+)
+.ok();
 }
