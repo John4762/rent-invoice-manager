@@ -30,7 +30,7 @@ pub async fn send_invoice_email(payload: SendInvoiceEmailPayload) -> Result<(), 
         .map_err(|error| format!("Email task failed: {error}"))?
 }
 
-fn send_invoice_email_sync(payload: SendInvoiceEmailPayload) -> Result<(), String> {
+pub fn send_invoice_email_sync(payload: SendInvoiceEmailPayload) -> Result<(), String> {
     if payload.sender_email.trim().is_empty() {
         return Err("Sender email is missing in Settings.".to_string());
     }

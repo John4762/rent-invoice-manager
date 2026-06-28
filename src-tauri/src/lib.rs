@@ -7,7 +7,6 @@ use commands::archive_commands::get_available_months;
 use commands::archive_commands::get_invoice_details;
 use commands::archive_commands::get_invoices_for_month;
 use commands::archive_commands::open_pdf;
-use commands::archive_commands::seed_archive_data;
 use commands::email_commands::send_invoice_email;
 use commands::settings_commands::get_settings;
 use commands::settings_commands::save_settings;
@@ -20,6 +19,8 @@ use database::connection::get_connection;
 use database::migrations::run_migrations;
 use commands::archive_commands::archive_sent_invoices;
 use commands::archive_commands::get_archived_invoice_conflicts;
+use commands::file_commands::save_invoice_pdf;
+use commands::resend_email_commands::resend_archived_invoice_email;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -50,10 +51,11 @@ pub fn run() {
                 get_invoices_for_month,
                 get_invoice_details,
                 open_pdf,
-                seed_archive_data,
                 get_archived_invoice_conflicts,
                 archive_sent_invoices,
                 send_invoice_email,
+                save_invoice_pdf,
+                resend_archived_invoice_email,
                 get_settings,
                 save_settings
             ]

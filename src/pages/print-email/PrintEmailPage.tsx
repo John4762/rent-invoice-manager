@@ -197,21 +197,45 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 async function createInvoiceEmailAttachments(
   invoices: RentalInvoiceDraft[],
-): Promise<EmailAttachmentPayload[]> {
+  cycleMonthNumber: number,
+  cycleYear: number,
+): Promise<{
+  attachments: EmailAttachmentPayload[];
+  archivedPdfPaths: Record<string, string>;
+}> {
   const attachments: EmailAttachmentPayload[] = [];
+
+  const archivedPdfPaths: Record<string, string> = {};
 
   for (const invoice of invoices) {
     const blob = await createInvoicePdfBlob(invoice);
     const buffer = await blob.arrayBuffer();
 
+    const contentBase64 = arrayBufferToBase64(buffer);
+
+    const pdfPath = await invoke<string>(
+      "save_invoice_pdf",
+      {
+        invoiceNumber: invoice.invoiceNumber,
+        cycleMonth: cycleMonthNumber,
+        cycleYear,
+        pdfBase64: contentBase64,
+      },
+    );
+
+    archivedPdfPaths[invoice.invoiceNumber] = pdfPath;
+
     attachments.push({
       fileName: getInvoiceFileName(invoice),
-      contentBase64: arrayBufferToBase64(buffer),
+      contentBase64,
       contentType: "application/pdf",
     });
   }
 
-  return attachments;
+  return {
+    attachments,
+    archivedPdfPaths,
+  };
 }
 
 function downloadPdfBlob(blob: Blob, fileName: string) {
@@ -440,7 +464,18 @@ export function PrintEmailPage() {
     setInvoicesToStatus(targetInvoices, "sending");
 
     try {
-      const attachments = await createInvoiceEmailAttachments(targetInvoices);
+      const { cycleMonthNumber, cycleYear } = getCycleMonthParts(
+  generatedRun?.cycleMonth ?? "",
+);
+
+const {
+  attachments,
+  archivedPdfPaths,
+} = await createInvoiceEmailAttachments(
+  targetInvoices,
+  cycleMonthNumber,
+  cycleYear,
+);
 
       await invoke("send_invoice_email", {
         payload: {
@@ -452,10 +487,6 @@ export function PrintEmailPage() {
           attachments,
         },
       });
-
-      const { cycleMonthNumber, cycleYear } = getCycleMonthParts(
-        generatedRun?.cycleMonth ?? "",
-      );
 
       await invoke("archive_sent_invoices", {
         payload: {
@@ -478,7 +509,7 @@ export function PrintEmailPage() {
             sgstPercent: invoice.sgstRate,
             sgstAmount: invoice.sgstAmount,
             grandTotal: invoice.grandTotalRounded,
-            pdfPath: getInvoiceFileName(invoice),
+            pdfPath: archivedPdfPaths[invoice.invoiceNumber],
           })),
         },
       });

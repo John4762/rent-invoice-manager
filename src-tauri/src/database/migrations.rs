@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS settings (
     address TEXT NOT NULL,
 
     invoice_prefix TEXT NOT NULL,
-
+    sac_code TEXT NOT NULL,
     recipient_email TEXT NOT NULL,
     sender_email TEXT NOT NULL,
     gmail_app_password TEXT NOT NULL
@@ -55,6 +55,7 @@ INSERT OR IGNORE INTO settings (
     gstin,
     address,
     invoice_prefix,
+    sac_code,
     recipient_email,
     sender_email,
     gmail_app_password
@@ -65,7 +66,8 @@ VALUES (
     '',
     '',
     '',
-    'AJ',
+    '',
+    '',
     '',
     '',
     ''
@@ -120,4 +122,14 @@ CREATE TABLE IF NOT EXISTS archived_invoices (
     [],
 )
 .ok();
+
+conn.execute(
+    "
+    ALTER TABLE settings
+    ADD COLUMN sac_code TEXT NOT NULL DEFAULT ''
+    ",
+    [],
+)
+.ok();
+
 }

@@ -1,4 +1,4 @@
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
 
 use crate::models::{
     archive_invoice::ArchiveInvoice,
@@ -100,6 +100,42 @@ pub fn get_invoices_for_month(
     invoices
         .map(|i| i.unwrap())
         .collect()
+}
+
+pub fn mark_email_sent(
+    conn: &Connection,
+    invoice_number: String,
+) {
+    conn.execute(
+        "
+        UPDATE archived_invoices
+        SET
+            email_status = 'sent',
+            email_sent_at = datetime('now'),
+            email_error = NULL
+        WHERE invoice_number = ?
+        ",
+        params![invoice_number],
+    )
+    .unwrap();
+}
+
+pub fn mark_email_failed(
+    conn: &Connection,
+    invoice_number: String,
+    error: String,
+) {
+    conn.execute(
+        "
+        UPDATE archived_invoices
+        SET
+            email_status = 'failed',
+            email_error = ?
+        WHERE invoice_number = ?
+        ",
+        params![error, invoice_number],
+    )
+    .unwrap();
 }
 
 pub fn get_invoice_details(

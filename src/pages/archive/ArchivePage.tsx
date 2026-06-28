@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
+import { toast } from "sonner";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -30,6 +30,12 @@ interface ArchiveInvoiceDetails {
   email_status?: "sent" | "failed" | "pending";
 }
 
+interface Settings {
+  sender_email: string;
+  recipient_email: string;
+  gmail_app_password: string;
+}
+
 export function ArchivePage() {
   const [months, setMonths] = useState<ArchiveMonth[]>([]);
 
@@ -40,23 +46,29 @@ export function ArchivePage() {
   const [selectedInvoice, setSelectedInvoice] =
     useState<ArchiveInvoiceDetails | null>(null);
 
+    const [settings, setSettings] = useState<Settings | null>(null);
+
   useEffect(() => {
     loadArchive();
   }, []);
 
-  async function loadArchive() {
-    try {
-      const months = await invoke<ArchiveMonth[]>("get_available_months");
+async function loadArchive() {
+  try {
+    const settings = await invoke<Settings>("get_settings");
 
-      setMonths(months);
+    setSettings(settings);
 
-      if (months.length > 0) {
-        await loadMonth(months[0].month);
-      }
-    } catch (error) {
-      console.error(error);
+    const months = await invoke<ArchiveMonth[]>("get_available_months");
+
+    setMonths(months);
+
+    if (months.length > 0) {
+      await loadMonth(months[0].month);
     }
+  } catch (error) {
+    console.error(error);
   }
+}
 
   async function loadMonth(monthString: string) {
     const [monthName, yearString] = monthString.split(" ");
@@ -303,17 +315,44 @@ export function ArchivePage() {
                   </button>
 
                   <button
-                    className="
-                      rounded-lg
-                      border
-                      border-zinc-700
-                      px-5
-                      py-2
-                      text-zinc-100
-                    "
-                  >
-                    Email Again
-                  </button>
+  onClick={async () => {
+    if (!selectedInvoice) {
+      return;
+    }
+
+    try {
+      await invoke(
+        "resend_archived_invoice_email",
+        {
+          invoiceNumber:
+            selectedInvoice.invoice_number,
+        },
+      );
+
+      toast.success(
+        "Invoice emailed successfully",
+      );
+
+      await loadInvoiceDetails(
+        selectedInvoice.invoice_number,
+      );
+    } catch (error) {
+      console.error(error);
+
+      toast.error(String(error));
+    }
+  }}
+  className="
+    rounded-lg
+    border
+    border-zinc-700
+    px-5
+    py-2
+    text-zinc-100
+  "
+>
+  Email Again
+</button>
                 </div>
               </>
             )}

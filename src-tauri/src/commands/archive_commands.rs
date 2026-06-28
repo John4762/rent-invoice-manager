@@ -41,13 +41,30 @@ pub fn get_invoice_details(
     )
 }
 
+use tauri::Manager;
 #[tauri::command]
 pub fn open_pdf(
     app: AppHandle,
     pdf_path: String,
 ) -> Result<(), String> {
+    let full_path = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join(pdf_path);
+
+    if !full_path.exists() {
+        return Err(format!(
+            "Archived PDF not found:\n{}",
+            full_path.display()
+        ));
+    }
+
     app.opener()
-        .open_path(pdf_path, None::<&str>)
+        .open_path(
+            full_path.to_string_lossy().to_string(),
+            None::<&str>,
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -230,274 +247,4 @@ pub fn archive_sent_invoices(
     }
 
     Ok(())
-}
-
-#[tauri::command]
-pub fn seed_archive_data() {
-    let conn = get_connection();
-
-    // Invoice Runs
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO invoice_runs (
-            id,
-            cycle_month,
-            cycle_year,
-            generated_at
-        )
-        VALUES (
-            'run_june_2026',
-            6,
-            2026,
-            '2026-06-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO invoice_runs (
-            id,
-            cycle_month,
-            cycle_year,
-            generated_at
-        )
-        VALUES (
-            'run_may_2026',
-            5,
-            2026,
-            '2026-05-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO invoice_runs (
-            id,
-            cycle_month,
-            cycle_year,
-            generated_at
-        )
-        VALUES (
-            'run_april_2026',
-            4,
-            2026,
-            '2026-04-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    // Archived Invoices
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO archived_invoices (
-            id,
-            invoice_run_id,
-            tenant_id,
-            invoice_number,
-            tenant_name_snapshot,
-            tenant_address_snapshot,
-            location_address_snapshot,
-            invoice_date,
-            financial_year,
-            rent_amount,
-            cgst_percent,
-            cgst_amount,
-            sgst_percent,
-            sgst_amount,
-            grand_total,
-            pdf_path,
-            email_status,
-            email_sent_at,
-            email_error,
-            generated_at
-        )
-        VALUES (
-            'inv_june_cp',
-            'run_june_2026',
-            'tenant_cp',
-            'AJ/CP/3/26-27',
-            'CP Traders',
-            'Kochi Address',
-            'Office Address',
-            '2026-06-01',
-            '26-27',
-            25000,
-            9,
-            2250,
-            9,
-            2250,
-            29500,
-            'archive/june/cp.pdf',
-            'sent',
-            '2026-06-02',
-            NULL,
-            '2026-06-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO archived_invoices (
-            id,
-            invoice_run_id,
-            tenant_id,
-            invoice_number,
-            tenant_name_snapshot,
-            tenant_address_snapshot,
-            location_address_snapshot,
-            invoice_date,
-            financial_year,
-            rent_amount,
-            cgst_percent,
-            cgst_amount,
-            sgst_percent,
-            sgst_amount,
-            grand_total,
-            pdf_path,
-            email_status,
-            email_sent_at,
-            email_error,
-            generated_at
-        )
-        VALUES (
-            'inv_june_xyz',
-            'run_june_2026',
-            'tenant_xyz',
-            'AJ/XYZ/3/26-27',
-            'XYZ Logistics',
-            'Kochi Address',
-            'Office Address',
-            '2026-06-01',
-            '26-27',
-            40000,
-            9,
-            3600,
-            9,
-            3600,
-            47200,
-            'archive/june/xyz.pdf',
-            'failed',
-            NULL,
-            'SMTP Authentication Failed',
-            '2026-06-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO archived_invoices (
-            id,
-            invoice_run_id,
-            tenant_id,
-            invoice_number,
-            tenant_name_snapshot,
-            tenant_address_snapshot,
-            location_address_snapshot,
-            invoice_date,
-            financial_year,
-            rent_amount,
-            cgst_percent,
-            cgst_amount,
-            sgst_percent,
-            sgst_amount,
-            grand_total,
-            pdf_path,
-            email_status,
-            email_sent_at,
-            email_error,
-            generated_at
-        )
-        VALUES (
-            'inv_may_cp',
-            'run_may_2026',
-            'tenant_cp',
-            'AJ/CP/2/26-27',
-            'CP Traders',
-            'Kochi Address',
-            'Office Address',
-            '2026-05-01',
-            '26-27',
-            25000,
-            9,
-            2250,
-            9,
-            2250,
-            29500,
-            'archive/may/cp.pdf',
-            'sent',
-            '2026-05-02',
-            NULL,
-            '2026-05-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
-
-    conn.execute(
-        "
-        INSERT OR IGNORE INTO archived_invoices (
-            id,
-            invoice_run_id,
-            tenant_id,
-            invoice_number,
-            tenant_name_snapshot,
-            tenant_address_snapshot,
-            location_address_snapshot,
-            invoice_date,
-            financial_year,
-            rent_amount,
-            cgst_percent,
-            cgst_amount,
-            sgst_percent,
-            sgst_amount,
-            grand_total,
-            pdf_path,
-            email_status,
-            email_sent_at,
-            email_error,
-            generated_at
-        )
-        VALUES (
-            'inv_april_cp',
-            'run_april_2026',
-            'tenant_cp',
-            'AJ/CP/1/26-27',
-            'CP Traders',
-            'Kochi Address',
-            'Office Address',
-            '2026-04-01',
-            '26-27',
-            25000,
-            9,
-            2250,
-            9,
-            2250,
-            29500,
-            'archive/april/cp.pdf',
-            'sent',
-            '2026-04-02',
-            NULL,
-            '2026-04-02'
-        )
-        ",
-        [],
-    )
-    .unwrap();
 }
